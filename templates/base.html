@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{% block title %}{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'bootstrap-5.3.7-dist/css/bootstrap.css' %}">
+    <link rel="script" href="{% static 'bootstrap-5.3.7-dist/js/bootstrap.bundle.js' %}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<nav class="navbar navbar-expand navbar-dark bg-dark align-items-center px-3 py-0 py-lg-1">
+    <a class="navbar-brand fw-bold text-danger" href="{% url 'home' %}">Brake Shop</a>
+    <ul class="navbar-nav d-flex justify-content-between align-items-center ms-auto">
+        <li class="nav-item mx-4 d-none d-md-inline">
+            <a class="nav-link text-danger active" href="#">Home</a>
+        </li>
+
+        <li class="nav-item mx-4 d-none d-md-inline">
+            <a class="nav-link text-white" href="#">About</a>
+        </li>
+
+        <li class="nav-item mx-4 d-none d-md-inline">
+            <a class="nav-link text-white" href="#">Contact</a>
+        </li>
+
+        <li class="nav-item ms-sm-1 ms-md-2 ms-lg-3">
+            <a class="nav-link" href="#">
+                <img src="{% static 'icons/cart.svg' %}" alt="" style="width: 30px; height: 30px;">
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" href="#">
+                <img src="{% static 'icons/user.svg' %}" alt="" style="width: 30px; height: 30px;">
+            </a>
+        </li>
+    </ul>
+</nav>
+
+{% block content %}{% endblock %}
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
