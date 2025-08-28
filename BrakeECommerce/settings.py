@@ -51,9 +51,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'smart_selects',
+    'import_export',
     'rest_framework',
     'main',
     'vehicles',
+    'catalogue'
 ]
 
 MIDDLEWARE = [
