@@ -1,4 +1,5 @@
 # vehicles/models.py
+from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from smart_selects.db_fields import ChainedForeignKey
 from .choices import VehicleCategory
@@ -44,12 +45,18 @@ class Car(PoweredVehicle, DatedVehicle):
         show_all=False, auto_choose=True, sort=True, on_delete=models.CASCADE,
     )
     name = models.CharField(max_length=100)
+    product_links = GenericRelation(
+        'catalogue.ProductVehicle',
+        content_type_field='vehicle_ct',
+        object_id_field='vehicle_id',
+        related_query_name='car_links',
+    )
 
     class Meta: verbose_name = "Car"
 
     def __str__(self):
-        start = self.date_start.strftime('%Y') if self.date_start else '?'
-        end   = self.date_end.strftime('%Y')   if self.date_end   else '?'
+        start = self.date_start.strftime('%m/%y') if self.date_start else '?'
+        end   = self.date_end.strftime('%m/%y')   if self.date_end   else '?'
         return f"{self.brand.name} {self.model.name} {self.name} ({start}–{end}) – {self.kw} KW/{self.cv} CV"
 
 class CommercialVehicle(PoweredVehicle, DatedVehicle):

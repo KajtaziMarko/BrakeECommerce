@@ -36,7 +36,7 @@ class ModelAdmin(admin.ModelAdmin):
 
 @admin.register(Car)
 class CarAdmin(admin.ModelAdmin):
-    list_display = ('brand','model','name','kw','cv','date_start','date_end')
+    list_display = ('id', 'brand','model','name','kw','cv','date_start','date_end')
     fieldsets = (
         ('Vehicle Info', {
             'fields': ('brand', 'model', 'name')
@@ -54,7 +54,7 @@ class CarAdmin(admin.ModelAdmin):
 
 @admin.register(CommercialVehicle)
 class CVAdmin(admin.ModelAdmin):
-    list_display = ('brand','model','name','kw','cv','date_start','date_end')
+    list_display = ('id', 'brand','model','name','kw','cv','date_start','date_end')
     fieldsets = (
         ('Vehicle Info', {
             'fields': ('brand', 'model', 'name')
@@ -73,7 +73,7 @@ class CVAdmin(admin.ModelAdmin):
 
 @admin.register(MotorBike)
 class MotorBikeAdmin(admin.ModelAdmin):
-    list_display = ('brand', 'model', 'displacement', 'years_list')
+    list_display = ('id', 'brand', 'model', 'displacement', 'years_list')
     fieldsets = (
         ('Vehicle Info', {
             'fields': ('brand', 'model')

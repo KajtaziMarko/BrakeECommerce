@@ -1,4 +1,6 @@
 # catalogue/models.py
+from django.db.models import Q
+
 from catalogue.choices import (
     DiscType, Axle, AssemblySide, Material, CaliperPosition,
     WearIndicator, PadAccessoryType
@@ -8,6 +10,8 @@ from decimal import Decimal
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+
+from vehicles.models import Car, MotorBike, CommercialVehicle
 
 
 class ProductBase(models.Model):
@@ -49,12 +53,41 @@ class Disc(ProductBase):
     )
     units_per_box = models.PositiveSmallIntegerField(null=True, blank=True)
 
-    fitments = GenericRelation(
-        "ProductVehicle",
-        content_type_field="product_ct",
-        object_id_field="product_id",
-        related_query_name="discs",
+    product_links = GenericRelation(
+        'catalogue.ProductVehicle',
+        content_type_field='product_ct',
+        object_id_field='product_id',
+        related_query_name='disc_links',
     )
+
+
+class Drum(ProductBase):
+    diameter_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    width_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    height_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    num_holes = models.PositiveSmallIntegerField(null=True, blank=True)
+    center_bore_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    max_diameter_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    axle = models.CharField(max_length=1, choices=Axle.choices, null=True, blank=True)
+
+    product_links = GenericRelation(
+        'catalogue.ProductVehicle',
+        content_type_field='product_ct',
+        object_id_field='product_id',
+        related_query_name='drum_links',
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                name="drum_max_diameter_gt_diameter",
+                check=(
+                    models.Q(max_diameter_mm__isnull=True) |
+                    models.Q(diameter_mm__isnull=True) |
+                    models.Q(max_diameter_mm__gt=models.F("diameter_mm"))
+                ),
+            ),
+        ]
 
 
 class Pad(ProductBase):
@@ -62,19 +95,29 @@ class Pad(ProductBase):
     thickness_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     height_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     braking_system = models.CharField(max_length=30, null=True, blank=True)
-    wva_number = models.CharField(max_length=30, null=True, blank=True)
+    wva_number = models.CharField(max_length=100, null=True, blank=True)
     wear_indicator = models.CharField(max_length=1, choices=WearIndicator.choices, null=True, blank=True)
     accessories = models.CharField(max_length=100, null=True, blank=True)
     axle = models.CharField(max_length=1, choices=Axle.choices, null=True, blank=True)
     fmsi = models.CharField(max_length=70, null=True, blank=True)
 
+    product_links = GenericRelation(
+        'catalogue.ProductVehicle',
+        content_type_field='product_ct',
+        object_id_field='product_id',
+        related_query_name='pad_links',
+    )
 
-class PadAccessory(ProductBase):  # singular model name
+
+class PadAccessory(ProductBase):
     braking_system = models.CharField(max_length=30, null=True, blank=True)
     accessory_type = models.CharField(max_length=1, choices=PadAccessoryType.choices, null=True, blank=True)
     axle = models.CharField(max_length=1, choices=Axle.choices, null=True, blank=True)
     length_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     assembly_side = models.CharField(max_length=1, choices=AssemblySide.choices, null=False, blank=False, default=AssemblySide.NONE)
+
+    class Meta:
+        verbose_name_plural = "Pad Accessories"
 
 
 class Hose(ProductBase):
@@ -86,7 +129,7 @@ class Hose(ProductBase):
 
 class CylinderBase(ProductBase):
     diameter_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
-    threading = models.CharField(max_length=30, null=True, blank=True)
+    threading = models.CharField(max_length=100, null=True, blank=True)
     material = models.CharField(max_length=1, choices=Material.choices, null=True, blank=True)
     braking_system = models.CharField(max_length=30, null=True, blank=True)
     axle = models.CharField(max_length=1, choices=Axle.choices, null=True, blank=True)
@@ -134,14 +177,14 @@ class ShoeKit(ProductBase):
     is_pre_assembled = models.BooleanField(default=False)
     braking_system = models.CharField(max_length=30, null=True, blank=True)
     axle = models.CharField(max_length=1, choices=Axle.choices, null=True, blank=True)
-    is_manual_proportioning_valve = models.BooleanField(default=False)  # fixed “manuel”
+    is_manual_proportioning_valve = models.BooleanField(default=False)
 
 
 class Shoe(ProductBase):
     diameter_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     width_mm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     is_parking_brake = models.BooleanField(default=False)
-    has_handbrake_lever = models.BooleanField(default=False)  # “lever”, not “level”
+    has_handbrake_lever = models.BooleanField(default=False)
     has_accessories = models.BooleanField(default=False)
     axle = models.CharField(max_length=1, choices=Axle.choices, null=True, blank=True)
     braking_system = models.CharField(max_length=30, null=True, blank=True)
@@ -158,13 +201,20 @@ class Kit(ProductBase):
     pad_per_box = models.PositiveSmallIntegerField(null=True, blank=True)
     axle = models.CharField(max_length=1, choices=Axle.choices, null=True, blank=True)
 
+def product_ct_limit():
+    cts = ContentType.objects.get_for_models(Disc).values()
+    return Q(pk__in=[ct.pk for ct in cts])
+
+def vehicle_ct_limit():
+    cts = ContentType.objects.get_for_models(Car, MotorBike, CommercialVehicle).values()
+    return Q(pk__in=[ct.pk for ct in cts])
 
 class ProductVehicle(models.Model):
-    product_ct = models.ForeignKey(ContentType, on_delete=models.CASCADE, related_name="+")
+    product_ct = models.ForeignKey(ContentType, on_delete=models.CASCADE, related_name="+", limit_choices_to=product_ct_limit)
     product_id = models.CharField(max_length=30)
     product = GenericForeignKey("product_ct", "product_id")
 
-    vehicle_ct = models.ForeignKey(ContentType, on_delete=models.CASCADE, related_name="+")
+    vehicle_ct = models.ForeignKey(ContentType, on_delete=models.CASCADE, related_name="+", limit_choices_to=vehicle_ct_limit)
     vehicle_id = models.PositiveIntegerField()
     vehicle = GenericForeignKey("vehicle_ct", "vehicle_id")
 
@@ -181,5 +231,7 @@ class ProductVehicle(models.Model):
             models.Index(fields=["vehicle_ct", "vehicle_id"]),
         ]
 
+        verbose_name_plural = "Product Vehicles"
+
     def __str__(self):
-        return f"{self.product} -> {self.vehicle}"
+        return f"{self.product} <-> {self.vehicle}"
