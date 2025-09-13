@@ -30,7 +30,17 @@ EXPLICIT_PRODUCT_MODELS: Sequence[str] = (
     "catalogue.Disc",
     "catalogue.Drum",
     "catalogue.Pad",
-    # Add other concrete product models as needed, e.g. "catalogue.Shoe"
+    "catalogue.PadAccessory",
+    "catalogue.Hose",
+    "catalogue.WheelCylinder",
+    "catalogue.MasterCylinder",
+    "catalogue.ClutchCylinder",
+    "catalogue.ClutchMasterCylinder",
+    "catalogue.Caliper",
+    "catalogue.ShoeKit",
+    "catalogue.Shoe",
+    "catalogue.ProportioningValve",
+    "catalogue.Kit",
 )
 
 PRODUCT_BASE_PATH = None

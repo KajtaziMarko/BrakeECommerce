@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import json
 from pathlib import Path
 import os
 
@@ -37,10 +37,42 @@ def env_required(name: str) -> str:
 SECRET_KEY = env_required('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = bool(os.environ.get("DEBUG", default=0))
 
-ALLOWED_HOSTS = []
+# Optional: keep your dotenv loader as-is
+if os.getenv("DJANGO_READ_DOTENV", "true").lower() == "true":
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / ".env")
 
+def env_required(name: str) -> str:
+    v = os.getenv(name)
+    if not v:
+        raise ImproperlyConfigured(f"Missing required env var: {name}")
+    return v
+
+def env_bool(key: str, default=False) -> bool:
+    return os.getenv(key, str(default)).strip().lower() in {"1","true","t","yes","y","on"}
+
+def env_list(key: str, default=None):
+    v = os.getenv(key)
+    if not v:
+        return default or []
+    v = v.strip()
+    if v.startswith("["):              # JSON list: ["a","b"]
+        try:
+            return json.loads(v)
+        except Exception:
+            pass
+    return [x.strip() for x in v.split(",") if x.strip()]  # comma list
+
+SECRET_KEY = env_required("DJANGO_SECRET_KEY")
+
+# Read DJANGO_DEBUG (not DEBUG)
+DEBUG = env_bool("DJANGO_DEBUG", True)
+
+# Parse hosts/origins safely
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", ["http://localhost:8000", "http://localhost:8001"])
 
 # Application definition
 INSTALLED_APPS = [

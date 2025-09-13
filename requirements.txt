@@ -4,3 +4,4 @@ django-smart-selects~=1.7.2
 dotenv~=0.9.9
 python-dotenv~=1.1.1
 django-import-export~=4.3.9
+psycopg2-binary==2.9.10

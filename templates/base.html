@@ -11,13 +11,33 @@
     <link rel="script" href="{% static 'bootstrap-5.3.7-dist/js/bootstrap.bundle.js' %}">
 
     {% block extra_head %}{% endblock %}
+
+    <style>
+        .icon-user {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: currentColor;
+            -webkit-mask: url("{% static 'icons/user.svg' %}") no-repeat center / contain;
+            mask: url("{% static 'icons/user.svg' %}") no-repeat center / contain;
+        }
+
+        .icon-cart {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: currentColor;
+            -webkit-mask: url("{% static 'icons/cart.svg' %}") no-repeat center / contain;
+            mask: url("{% static 'icons/cart.svg' %}") no-repeat center / contain;
+        }
+    </style>
 </head>
 <body>
 <nav class="navbar navbar-expand navbar-dark bg-dark align-items-center px-3 py-0 py-lg-1">
     <a class="navbar-brand fw-bold text-danger" href="{% url 'home' %}">Brake Shop</a>
     <ul class="navbar-nav d-flex justify-content-between align-items-center ms-auto">
         <li class="nav-item mx-4 d-none d-md-inline">
-            <a class="nav-link text-danger active" href="#">Home</a>
+            <a class="nav-link text-white btn btn-link" href="{% url 'home' %}">Home</a>
         </li>
 
         <li class="nav-item mx-4 d-none d-md-inline">
@@ -28,21 +48,29 @@
             <a class="nav-link text-white" href="#">Contact</a>
         </li>
 
-        <li class="nav-item ms-sm-1 ms-md-2 ms-lg-3">
-            <a class="nav-link" href="#">
-                <img src="{% static 'icons/cart.svg' %}" alt="" style="width: 30px; height: 30px;">
+        <li class="nav-item mx-3">
+            <a class="nav-link text-light p-0 m-0 d-inline-flex align-items-center gap-1" href="#">
+                <span class="icon-cart p-0 m-0"></span>
+                {% if request.user.is_authenticated %}
+                    <span class="badge bg-danger">0</span>
+                {% endif %}
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link" href="#">
-                <img src="{% static 'icons/user.svg' %}" alt="" style="width: 30px; height: 30px;">
+            <a class="nav-link {% if user.is_authenticated %}text-danger{% else %}text-light{% endif %} p-0 m-0"
+               href="#">
+                <span class="icon-user p-0 m-0"></span>
             </a>
         </li>
     </ul>
 </nav>
 
 {% block content %}{% endblock %}
+
+<div class="container-fluid bg-dark p-5" id="contact" style="height: 80vh">
+    <h1 class="text-center text-white">Contact</h1>
+</div>
 
 {% block extra_scripts %}{% endblock %}
 </body>

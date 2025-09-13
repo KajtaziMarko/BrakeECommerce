@@ -146,8 +146,9 @@
         </div>
     </div>
 
-    <div class="container-fluid bg-black vh-100">
-
+    <div class="container-fluid bg-black p-5 m-0">
+        <h1 class="text-center text-white fw-bolder mb-5">About Us</h1>
+        <p class="text-white fs-4 px-md-3 text-center text-justify">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Adipisci blanditiis consequuntur dolorem ipsum molestias, officia quaerat quos repellendus? Aspernatur atque cumque deleniti deserunt dignissimos dolores ex laborum, maxime, nam nostrum nulla obcaecati ratione repellat. A aliquam aperiam, atque consectetur dolor ducimus eos fugit illum in, magni nam natus necessitatibus nihil optio placeat reiciendis sequi sint sit soluta tempore totam, vel voluptas! Architecto asperiores dolores fugit nulla qui rerum, saepe veniam!</p>
     </div>
 {% endblock %}
 
@@ -157,10 +158,9 @@
         const brandSelect = document.querySelector('#brandSelect');
         const modelSelect = document.querySelector('#modelSelect');
         const typeSelect = document.querySelector('#typeSelect');
-        const dispSelect = document.querySelector('#dispSelect');   // fixed name
+        const dispSelect = document.querySelector('#dispSelect');
         const yearSelect = document.querySelector('#yearSelect');
 
-        // column wrappers so we can hide/show
         const typeCol = typeSelect.parentElement;
         const dispCol = dispSelect.parentElement;
         const yearCol = yearSelect.parentElement;
@@ -176,7 +176,6 @@
         function applyVehicleTypeUI() {
             const isBike = (vehicleType === 'Motorbike');
 
-            // Cars/Trucks → Type required; Bikes → Displacement+Year required
             typeCol.hidden = isBike;
             typeSelect.disabled = true;
             typeSelect.required = !isBike;
@@ -212,7 +211,6 @@
             selectEl.disabled = false;
         }
 
-        // vehicle buttons
         const vehicleTypeInput = document.querySelector('#vehicleTypeInput');
         const activeBtn = document.querySelector('.btn-type-group .btn.active');
         if (activeBtn) vehicleTypeInput.value = activeBtn.getAttribute('data-vehicleType');
@@ -225,14 +223,12 @@
                 vehicleType = btn.getAttribute('data-vehicleType');
                 vehicleTypeInput.value = vehicleType;
 
-                // Reset dependent selects
                 resetSelect(modelSelect, 'Select Model');
                 resetSelect(typeSelect, 'Select Type');
                 resetSelect(dispSelect, 'Select Displacement');
                 resetSelect(yearSelect, 'Select Year');
                 applyVehicleTypeUI();
 
-                // Reload brands for this vehicle type
                 fetch('/api/brands/', {
                     method: 'GET',
                     headers: {
@@ -259,7 +255,6 @@
             });
         });
 
-        // brand → models
         brandSelect.addEventListener('change', () => {
             const brandId = brandSelect.value;
             if (!brandId) return;
@@ -286,7 +281,13 @@
                     data.forEach(model => {
                         const opt = document.createElement('option');
                         opt.value = model.id;
-                        opt.textContent = `${model.name} ${model.date_start} - ${model.date_end}`;
+
+                        if (vehicleType === "Motorbike") {
+                            opt.textContent = `${model.name}`;
+                        } else {
+                            opt.textContent = `${model.name} ${model.date_start} - ${model.date_end}`;
+                        }
+
                         modelSelect.appendChild(opt);
                     });
                     modelSelect.disabled = false;
@@ -294,10 +295,8 @@
                 .catch(err => console.error('Error loading models:', err));
         });
 
-        // NEW: map for bike years per displacement
         let bikeYearsByDisp = new Map();
 
-        // populate helpers (unchanged)
         function fillOptions(selectEl, items, placeholder, format = v => v) {
             resetSelect(selectEl, placeholder);
             if (!items || !items.length) return;
@@ -309,17 +308,15 @@
                 frag.appendChild(opt);
             });
             selectEl.appendChild(frag);
-            selectEl.disabled = false; // enable only when items exist
+            selectEl.disabled = false;
         }
 
-        // --- model → either car/truck types OR bike displacements (UPDATED bike branch) ---
         modelSelect.addEventListener('change', () => {
             const brandId = brandSelect.value;
             const modelId = modelSelect.value;
             if (!brandId || !modelId) return;
 
             if (vehicleType === 'Motorbike') {
-                // fetch displacements+years, but only fill displacements now
                 fetch('/api/motorbikes/', {
                     method: 'GET',
                     headers: {
@@ -334,7 +331,6 @@
                         return r.json();
                     })
                     .then(data => {
-                        // Build a map: displacement -> set(years)
                         bikeYearsByDisp = new Map();
                         (data || []).forEach(b => {
                             const key = String(b.displacement);
@@ -343,14 +339,11 @@
                             bikeYearsByDisp.set(key, set);
                         });
 
-                        // Fill displacement options (sorted numeric); leave Year disabled for now
                         const disps = Array.from(bikeYearsByDisp.keys()).map(Number).sort((a, b) => a - b);
                         fillOptions(dispSelect, disps, 'Select Displacement', d => `${d} cc`);
 
-                        // Make sure Year is reset and stays disabled until a displacement is chosen
                         resetSelect(yearSelect, 'Select Year');
 
-                        // Required flags: OK to keep required; disabled bypasses validation
                         dispSelect.required = true;
                         yearSelect.required = true;
                     })
@@ -361,7 +354,6 @@
                     });
 
             } else {
-                // car/truck branch (unchanged)
                 fetch('/api/types/', {
                     method: 'GET',
                     headers: {
@@ -393,21 +385,19 @@
             }
         });
 
-        // NEW: when a displacement is chosen, fill only the years for that displacement
         dispSelect.addEventListener('change', () => {
-            const dispKey = dispSelect.value;           // string key
-            resetSelect(yearSelect, 'Select Year');     // keep disabled until we have items
+            const dispKey = dispSelect.value;
+            resetSelect(yearSelect, 'Select Year');
 
             if (!dispKey) return;
 
             const set = bikeYearsByDisp.get(dispKey) || new Set();
             const years = Array.from(set).map(Number).sort((a, b) => a - b);
 
-            fillOptions(yearSelect, years, 'Select Year'); // this enables yearSelect
+            fillOptions(yearSelect, years, 'Select Year');
             yearSelect.required = true;
         });
 
-        // initial paint
         applyVehicleTypeUI();
     </script>
 {% endblock %}

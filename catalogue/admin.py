@@ -64,11 +64,11 @@ class CompatibleVehicleInline(GenericTabularInline):
                     return str(val)
             return None
 
-        brand = display_attr(v, ["brand", "make", "manufacturer"])
-        model = display_attr(v, ["model", "model_name", "series"])
-        vtype = display_attr(v, ["type", "type_name", "variant", "trim", "body_type", "engine", "displacement"])
+        brand = display_attr(v, ["brand"])
+        model = display_attr(v, ["model"])
+        # vtype = display_attr(v, ["car"])
 
-        parts = [p for p in [brand, model, vtype] if p]
+        parts = [p for p in [brand, model] if p]
         return " ".join(parts) if parts else str(v)
 
     vehicle_bmt.short_description = "Vehicle (Brand Model Type)"

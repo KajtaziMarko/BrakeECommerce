@@ -304,13 +304,13 @@ class AxleWidget(Widget):
 
 class SideWidget(Widget):
     def clean(self, value, row=None, *args, **kwargs):
-        if is_bad(value): return AssemblySide.NONE
+        if is_bad(value): return None
         s = str(value).strip().lower()
         if ("left" in s and "right" in s) or s.startswith("b"): return AssemblySide.BOTH
         if "left" in s: return AssemblySide.LEFT
         if "right" in s: return AssemblySide.RIGHT
         su = s.upper()
-        return su if su in {"L","R","B","N"} else AssemblySide.NONE
+        return su if su in {"L","R","B","N"} else None
 
 class WearIndicatorWidget(Widget):
     def clean(self, value, row=None, *args, **kwargs):

@@ -1,0 +1,52 @@
+<div class="card row w-100 mb-3 mx-0" style="width: 18rem;">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center p-0">
+            <div>
+                <h5 class="fw-bold text-danger p-0 m-0">{{ item.type_label }}</h5>
+                <h5 class="card-title p-0 m-0">{{ item.code }}</h5>
+            </div>
+            {% if item.price %}
+                <p class="fs-5">
+          <span class="badge bg-danger text-white">
+            <strong>{{ item.price }} MKD</strong>
+          </span>
+                </p>
+            {% endif %}
+        </div>
+
+        <hr class="my-3">
+
+        <div class="d-flex justify-content-between align-items-center p-0">
+            <div class="container-fluid row p-0 m-0">
+                {% for label, value, unit in item.card_specs %}
+                    <div class="col-auto ps-0">
+                        <p class="p-0 m-0">
+                            {{ label }}:
+                            <span class="fw-bold">{{ value }}{% if unit %} {{ unit }}{% endif %}</span>
+                        </p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center p-0 my-1">
+            <div class="d-flex align-items-center p-0 m-0">
+                {% if item.image_url %}
+                    <a href="{{ item.image_url }}" class="btn btn-link p-0 m-0 text-danger"
+                       style="text-decoration:none">
+                        Image
+                    </a>
+                {% endif %}
+                {% if item.technical_image_url %}
+                    <a href="{{ item.technical_image_url }}" class="btn btn-link p-0 ms-2 my-0 text-danger"
+                       style="text-decoration:none">
+                        Technical Image
+                    </a>
+                {% endif %}
+            </div>
+            {% if item.ean %}
+                <p class="p-0 m-0 text-secondary">Ean: {{ item.ean }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>

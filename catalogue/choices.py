@@ -7,7 +7,6 @@ class Axle(models.TextChoices):
     BOTH  = "B", _("Front and rear")
 
 class AssemblySide(models.TextChoices):
-    NONE  = "N", _("None")
     LEFT  = "L", _("Left")
     RIGHT = "R", _("Right")
     BOTH  = "B", _("Left and right")
