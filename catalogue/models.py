@@ -11,8 +11,8 @@ from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 
+from django.apps import apps as django_apps
 from vehicles.models import Car, MotorBike, CommercialVehicle
-
 
 class ProductBase(models.Model):
     code = models.CharField(max_length=30, unique=True, primary_key=True)
@@ -395,7 +395,14 @@ class Kit(ProductBase):
 
 
 def product_ct_limit():
-    cts = ContentType.objects.get_for_models(Disc).values()
+    product_models = [
+        m for m in django_apps.get_models()
+        if isinstance(m, type)
+        and issubclass(m, ProductBase)
+        and not m._meta.abstract
+    ]
+    # get_for_models returns a {model: ContentType} mapping
+    cts = ContentType.objects.get_for_models(*product_models).values()
     return Q(pk__in=[ct.pk for ct in cts])
 
 

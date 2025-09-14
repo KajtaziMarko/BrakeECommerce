@@ -1,3 +1,4 @@
+from django.utils.text import capfirst
 from import_export.admin import ImportExportModelAdmin
 from catalogue.import_recources import DiscResource, DrumResource, PadResource, PadAccessoryResource, HoseResource, WheelCylinderResource, MasterCylinderResource, ClutchCylinderResource, ClutchMasterCylinderResource, CaliperResource, ShoeKitResource, ShoeResource, ProportioningValveResource, KitResource
 from catalogue.models import Disc, ProductVehicle, product_ct_limit, vehicle_ct_limit, Drum, Pad, PadAccessory, Hose, WheelCylinder, MasterCylinder, ClutchCylinder, ClutchMasterCylinder, Caliper, ShoeKit, Shoe, ProportioningValve, Kit
@@ -23,55 +24,62 @@ class CompatibleVehicleInline(GenericTabularInline):
     ct_field = "product_ct"
     ct_fk_field = "product_id"
 
-    fields = ("vehicle_bmt",)
-    readonly_fields = ("vehicle_bmt",)
+    fields = ("vehicle_type", "vehicle_bmt")
+    readonly_fields = ("vehicle_type", "vehicle_bmt")
 
     extra = 0
     can_delete = False
     max_num = 0
-    show_change_link = False  # just text
+    show_change_link = False
     verbose_name = "Compatible vehicle"
     verbose_name_plural = "Compatible vehicles"
-    classes = ("collapse",)  # collapsible UI
+    classes = ("collapse",)
 
     def has_add_permission(self, request, obj):
         return False
 
+    def vehicle_type(self, obj):
+        """
+        'Car', 'Commercial Vehicle', or 'Motor Bike' from the row's ContentType.
+        """
+        if not obj.vehicle_ct_id:
+            return "-"
+        return capfirst(obj.vehicle_ct.name)
+    vehicle_type.short_description = "Type"
+
     def vehicle_bmt(self, obj):
         """
-        Show 'Brand Model Type' for the related vehicle (Car / CV / Bike).
-        Falls back gracefully if some fields are missing.
+        Render a readable line depending on whether the row points to a Car, CV, or Bike.
         """
         v = getattr(obj, "vehicle", None)
         if not v:
             return "-"
 
-        def display_attr(o, attr_candidates):
-            # use get_<field>_display() if available, else attribute value
-            for a in attr_candidates:
-                disp = getattr(o, f"get_{a}_display", None)
-                if callable(disp):
-                    val = disp()
-                    if val:
-                        return val
-                val = getattr(o, a, None)
-                if val:
-                    # if it's a related object, prefer its 'name'/'title' or str()
-                    if hasattr(val, "name"):
-                        return val.name
-                    if hasattr(val, "title"):
-                        return val.title
-                    return str(val)
-            return None
+        model_label = (obj.vehicle_ct.model or "").lower()
 
-        brand = display_attr(v, ["brand"])
-        model = display_attr(v, ["model"])
-        # vtype = display_attr(v, ["car"])
+        # Helpers
+        def ym(d, fmt="%m/%y", fallback="?"):
+            return d.strftime(fmt) if d else fallback
 
-        parts = [p for p in [brand, model] if p]
-        return " ".join(parts) if parts else str(v)
+        if model_label == "car":
+            return f"{v.brand.name} {v.model.name} {getattr(v, 'name', '')} ({ym(getattr(v,'date_start',None))}–{ym(getattr(v,'date_end',None))}) – {getattr(v,'kw','?')} kW/{getattr(v,'cv','?')} CV".strip()
+        elif model_label == "commercialvehicle":
+            return f"{v.brand.name} {v.model.name} {getattr(v, 'name', '')} ({ym(getattr(v,'date_start',None), fmt='%Y')}–{ym(getattr(v,'date_end',None), fmt='%Y')}) – {getattr(v,'kw','?')} kW/{getattr(v,'cv','?')} CV".strip()
+        elif model_label == "motorbike":
+            years = list(v.years.values_list('value', flat=True))
+            years_txt = f" ({min(years)}–{max(years)})" if years else ""
+            return f"{v.brand.name} {v.model.name} {v.displacement}cc{years_txt}"
 
-    vehicle_bmt.short_description = "Vehicle (Brand Model Type)"
+        parts = []
+        for attr in ("brand", "model", "name"):
+            val = getattr(v, attr, None)
+            if hasattr(val, "name"):
+                parts.append(val.name)
+            elif val:
+                parts.append(str(val))
+        return " ".join(parts) or str(v)
+
+    vehicle_bmt.short_description = "Vehicle (Brand / Model / Details)"
 
 
 @admin.register(Disc)
