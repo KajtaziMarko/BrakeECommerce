@@ -1,98 +1,125 @@
 # vehicles/models.py
+import code
+
 from django.db import models
+from django.db.models import Q
 from smart_selects.db_fields import ChainedForeignKey
-from .choices import VehicleCategory
 
-class Brand(models.Model):
-    name = models.CharField(max_length=50)
-    vehicle_type = models.CharField(max_length=1, choices=VehicleCategory.choices)
+from vehicles.choices import VehicleCategory
 
-    def __str__(self):
-        return f"{self.name} ({self.get_vehicle_type_display()})"
-
-class Model(models.Model):
-    brand = models.ForeignKey(Brand, on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
-    date_start = models.DateField(null=True, blank=True)
-    date_end   = models.DateField(null=True, blank=True)
+class Brands(models.Model):
+    sync_id = models.BigIntegerField(null=True, blank=True)
+    name = models.CharField(max_length=50, null=False, blank=False, unique=True)
+    slug = models.SlugField(null=False, blank=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=False, blank=False)
+    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
 
     def __str__(self):
-        start = self.date_start.strftime('%m/%Y') if self.date_start else '?'
-        end   = self.date_end.strftime('%m/%Y')   if self.date_end   else '>'
-        return f"{self.name} ({start}–{end})"
+        return self.name
 
-class PoweredVehicle(models.Model):
-    kw = models.PositiveIntegerField()
-    cv = models.PositiveIntegerField()
-    class Meta: abstract = True
-
-class DatedVehicle(models.Model):
-    date_start = models.DateField(null=True, blank=True)
-    date_end   = models.DateField(null=True, blank=True)
-    class Meta: abstract = True
-
-class Car(PoweredVehicle, DatedVehicle):
-    TYPE_CODE = VehicleCategory.CAR
-    brand = models.ForeignKey(
-        Brand,
-        related_name='cars',
-        on_delete=models.CASCADE,
-        limit_choices_to={'vehicle_type': TYPE_CODE},
-    )
-    model = ChainedForeignKey(
-        Model, chained_field="brand", chained_model_field="brand",
-        show_all=False, auto_choose=True, sort=True, on_delete=models.CASCADE,
-    )
-    name = models.CharField(max_length=100)
-
-    class Meta: verbose_name = "Car"
-
-    def __str__(self):
-        start = self.date_start.strftime('%Y') if self.date_start else '?'
-        end   = self.date_end.strftime('%Y')   if self.date_end   else '?'
-        return f"{self.brand.name} {self.model.name} {self.name} ({start}–{end}) – {self.kw} KW/{self.cv} CV"
-
-class CommercialVehicle(PoweredVehicle, DatedVehicle):
-    TYPE_CODE = VehicleCategory.CV
-    brand = models.ForeignKey(
-        Brand, on_delete=models.CASCADE,
-        limit_choices_to={'vehicle_type': TYPE_CODE},
-    )
-    model = ChainedForeignKey(
-        Model, chained_field="brand", chained_model_field="brand",
-        show_all=False, auto_choose=True, sort=True, on_delete=models.CASCADE,
-    )
-    name = models.CharField(max_length=100)
-
-    class Meta: verbose_name = "Commercial Vehicle"
-
-    def __str__(self):
-        start = self.date_start.strftime('%Y') if self.date_start else '?'
-        end   = self.date_end.strftime('%Y')   if self.date_end   else '?'
-        return f"{self.brand.name} {self.model.name} {self.name} ({start}–{end}) – {self.kw} KW/{self.cv} CV"
-
-class Year(models.Model):
-    value = models.PositiveSmallIntegerField(unique=True)
     class Meta:
-        ordering = ['value']
-        verbose_name = 'Model Year'
-        verbose_name_plural = 'Model Years'
-    def __str__(self): return f"{self.value}"
+        verbose_name_plural = "Brands"
 
-class MotorBike(models.Model):
-    TYPE_CODE = VehicleCategory.BIKE
-    brand = models.ForeignKey(
-        Brand, on_delete=models.CASCADE,
-        limit_choices_to={'vehicle_type': TYPE_CODE},
-    )
-    model = ChainedForeignKey(
-        Model, chained_field="brand", chained_model_field="brand",
-        show_all=False, auto_choose=True, sort=True, on_delete=models.CASCADE,
-    )
-    displacement = models.IntegerField()
-    years = models.ManyToManyField(Year, related_name='motorbikes', blank=True)
 
-    class Meta: verbose_name = 'Motor Bike'
+class Models(models.Model):
+    sync_id = models.BigIntegerField(null=True, blank=True)
+    brand = models.ForeignKey(Brands, on_delete=models.CASCADE)
+
+    vehicle_type = models.CharField(max_length=1, choices=VehicleCategory.choices, null=False, blank=False, default=VehicleCategory.CAR)
+    name = models.CharField(max_length=50, null=False, blank=False)
+    slug = models.SlugField(null=False, blank=False, unique=True)
+    date_start = models.DateField(null=True, blank=True)
+    date_end = models.DateField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, null=False, blank=False)
+    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
 
     def __str__(self):
-        return f"{self.brand.name} {self.displacement}"
+        full_date = f"{self.date_start.strftime("%m/%y")}-{self.date_end.strftime("%m/%y")}" if self.date_start and self.date_end else ""
+        return f"{self.name} {full_date} ({VehicleCategory(self.vehicle_type).label})"
+
+    class Meta:
+        verbose_name_plural = "Models"
+        indexes = [
+            models.Index(fields=["vehicle_type", "brand"]),
+        ]
+
+
+class Types(models.Model):
+    sync_id = models.BigIntegerField(null=True, blank=True)
+    brand = models.ForeignKey(Brands, on_delete=models.CASCADE, blank=False, null=False)
+    model = ChainedForeignKey(
+        Models, chained_field="brand", chained_model_field="brand",
+        show_all=False, auto_choose=True, sort=True, on_delete=models.CASCADE,
+        limit_choices_to=Q(vehicle_type__in=[VehicleCategory.CAR, VehicleCategory.CV]),
+        null=False, blank=False
+    )
+
+
+    name = models.CharField(max_length=50, null=False, blank=False)
+    slug = models.SlugField(null=False, blank=False, unique=True)
+    kw = models.IntegerField(null=False, blank=False)
+    cv = models.IntegerField(null=False, blank=False)
+    date_start = models.DateField(null=True, blank=True)
+    date_end = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=False, blank=False)
+    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+
+    def __str__(self):
+        start_date = self.date_start.strftime("%m/%y")
+        end_date = self.date_end.strftime("%m/%y")
+        return f"{self.name} kw: {self.kw} cv: {self.cv} {start_date} - {end_date}"
+
+    class Meta:
+        verbose_name_plural = "Types"
+        indexes = [
+            models.Index(fields=["brand"]),
+            models.Index(fields=["model"]),
+        ]
+
+class Displacements(models.Model):
+    sync_id = models.BigIntegerField(null=True, blank=True)
+
+    brand = models.ForeignKey(Brands, on_delete=models.CASCADE)
+    model = ChainedForeignKey(
+        Models, chained_field="brand", chained_model_field="brand",
+        show_all=False, auto_choose=True, sort=True, on_delete=models.CASCADE,
+        limit_choices_to=Q(vehicle_type__in=[VehicleCategory.BIKE]),
+        null=False, blank=False
+    )
+
+    value = models.IntegerField(null=False, blank=False)
+    created_at = models.DateTimeField(auto_now_add=True, null=False, blank=False)
+    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+
+    def __str__(self):
+        return f"{self.brand} {self.model} {self.value}cc"
+
+    class Meta:
+        verbose_name_plural = "Displacements"
+        indexes = [
+            models.Index(fields=["brand"]),
+            models.Index(fields=["model"]),
+        ]
+
+class Years(models.Model):
+    sync_id = models.BigIntegerField(null=True, blank=True)
+    value = models.IntegerField(null=False, blank=False, unique=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, null=False, blank=False)
+    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+
+    def __str__(self):
+        return str(self.value)
+
+    class Meta:
+        verbose_name_plural = "Years"
+
+
+class DisplacementYear(models.Model):
+    sync_id = models.BigIntegerField(null=True, blank=True)
+    displacement = models.ForeignKey(Displacements, on_delete=models.CASCADE)
+    year = models.ForeignKey(Years, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.displacement.brand} {self.displacement.model} {self.displacement} {self.year}"

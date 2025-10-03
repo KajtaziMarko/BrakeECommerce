@@ -13,5 +13,6 @@ urlpatterns = [
     path('api/brands/', vehicles_views.get_brands, name='get_brands'),
     path('api/models/', vehicles_views.get_models, name='get_models'),
     path('api/types/', vehicles_views.get_types, name='get_types'),
-    path('api/motorbikes/', vehicles_views.get_motorbikes, name='get_motorbikes'),
+    path('api/displacements/', vehicles_views.get_displacements, name='get_displacements'),
+    path('api/years/', vehicles_views.get_years, name='get_years'),
 ]

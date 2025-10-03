@@ -1,18 +1,30 @@
 from django.contrib import admin
-from vehicles.models import Brand, Model, Car, CommercialVehicle, MotorBike
+
+from vehicles.choices import VehicleCategory
+from vehicles.models import Brands, Models, Types, Years, DisplacementYear, Displacements
 from django.utils.translation import gettext_lazy as _
 
+
+class DisplacementYearInline(admin.TabularInline):
+    model = DisplacementYear
+    exclude = ('sync_id',)
+    extra = 0
 
 class ModelFilter(admin.SimpleListFilter):
     title = _('Model')
     parameter_name = 'model'
 
     def lookups(self, request, model_admin):
-        # pull the brand’s PK from the URL
         brand_id = request.GET.get('brand__id__exact')
         if not brand_id:
-            return []   # no brand selected → no model choices
-        qs = Model.objects.filter(brand_id=brand_id)
+            return []
+
+        allowed_vehicle_types = getattr(model_admin, 'model_vehicle_types', None)
+
+        qs = Models.objects.filter(brand_id=brand_id)
+        if allowed_vehicle_types:
+            qs = qs.filter(vehicle_type__in=allowed_vehicle_types)
+
         return [(m.pk, str(m)) for m in qs]
 
     def queryset(self, request, queryset):
@@ -21,22 +33,30 @@ class ModelFilter(admin.SimpleListFilter):
             return queryset.filter(model_id=val)
         return queryset
 
-@admin.register(Brand)
+@admin.register(Brands)
 class BrandAdmin(admin.ModelAdmin):
-    list_display = ('name', 'vehicle_type')
-    search_fields = ('name',)
-    list_filter = ('vehicle_type',)
-    ordering = ('name', 'vehicle_type')
+    list_display = ("name",)
+    search_fields = ("name",)
+    ordering = ("name",)
+    plural = "brands"
 
-@admin.register(Model)
+    exclude = ("created_at", "updated_at", "sync_id")
+
+@admin.register(Models)
 class ModelAdmin(admin.ModelAdmin):
-    list_display = ('name', 'brand', 'date_start', 'date_end')
-    search_fields = ('name', 'brand__name')
-    ordering = ('brand__name', 'name')
+    list_display = ("brand", "name", "vehicle_type", "date_start", "date_end")
+    search_fields = ("name",)
+    ordering = ("name",)
+    list_filter = ("brand", "vehicle_type")
+    plural = "models"
 
-@admin.register(Car)
-class CarAdmin(admin.ModelAdmin):
-    list_display = ('brand','model','name','kw','cv','date_start','date_end')
+    exclude = ("created_at", "updated_at", "sync_id")
+
+@admin.register(Types)
+class TypeAdmin(admin.ModelAdmin):
+    model_vehicle_types = [VehicleCategory.CAR, VehicleCategory.CV]
+
+    list_display = ("brand", "model", "name", "kw", "cv", "date_start", "date_end")
     fieldsets = (
         ('Vehicle Info', {
             'fields': ('brand', 'model', 'name')
@@ -48,49 +68,31 @@ class CarAdmin(admin.ModelAdmin):
             'fields': ('date_start', 'date_end')
         }),
     )
-    search_fields = ('brand__name','model__name','name')
-    list_filter = ('brand', ModelFilter,)
-    ordering = ('brand__name',)
 
-@admin.register(CommercialVehicle)
-class CVAdmin(admin.ModelAdmin):
-    list_display = ('brand','model','name','kw','cv','date_start','date_end')
-    fieldsets = (
-        ('Vehicle Info', {
-            'fields': ('brand', 'model', 'name')
-        }),
-        ('Performance', {
-            'fields': ('kw', 'cv')
-        }),
-        ('Production Dates', {
-            'fields': ('date_start', 'date_end')
-        }),
-    )
-    search_fields = ('brand__name','model__name','name')
-    autocomplete_fields = ['brand', 'model']
-    list_filter = ('brand', ModelFilter,)
-    ordering = ('brand__name',)
+    list_filter = ("brand", ModelFilter)
+    exclude = ("created_at", "updated_at", "sync_id")
 
-@admin.register(MotorBike)
-class MotorBikeAdmin(admin.ModelAdmin):
-    list_display = ('brand', 'model', 'displacement', 'years_list')
+@admin.register(Displacements)
+class DisplacementsAdmin(admin.ModelAdmin):
+    model_vehicle_types = [VehicleCategory.BIKE]
+
+    list_display = ("brand", "model", "value")
+    exclude = ("created_at", "updated_at", "sync_id")
     fieldsets = (
         ('Vehicle Info', {
             'fields': ('brand', 'model')
         }),
         ('Performance', {
-            'fields': ('displacement',)
-        }),
-        ('Production Dates', {
-            'fields': ('years',)
+            'fields': ('value',)
         }),
     )
-    filter_horizontal = ('years',)
-    search_fields = ('brand__name', 'model__name', 'displacement')
-    list_filter = ('brand', ModelFilter,)
-    ordering = ('brand__name',)
 
-    def years_list(self, obj):
-        return ", ".join(str(y.value) for y in obj.years.all())
+    list_filter = ("brand", ModelFilter)
+    inlines = (DisplacementYearInline, )
 
-    years_list.short_description = 'Model Years'
+@admin.register(Years)
+class YearsAdmin(admin.ModelAdmin):
+    list_display = ('value',)
+    search_fields = ('value',)
+
+    exclude = ("created_at", "updated_at", "sync_id")

@@ -1,5 +1,12 @@
-Django~=5.2.4
-djangorestframework~=3.16.0
-django-smart-selects~=1.7.2
-dotenv~=0.9.9
-python-dotenv~=1.1.1
+asgiref==3.9.1
+diff-match-patch==20241021
+Django==5.2.6
+django-import-export==4.3.9
+django-smart-selects==1.7.2
+djangorestframework==3.16.1
+dotenv==0.9.9
+pillow==11.3.0
+psycopg2-binary==2.9.10
+python-dotenv==1.1.1
+sqlparse==0.5.3
+tablib==3.8.0

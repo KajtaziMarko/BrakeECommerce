@@ -1,34 +1,32 @@
 from rest_framework import serializers
-from .models import Brand, Model, Car, CommercialVehicle, MotorBike
+from .models import Brands, Models, Types, Years, Displacements
 
-class BrandSerializer(serializers.ModelSerializer):
+
+class VehicleBrandSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Brand
+        model = Brands
         fields = ['id', 'name']
 
 class VehicleModelSerializer(serializers.ModelSerializer):
     date_start = serializers.DateField(format="%m/%y", required=False)
     date_end   = serializers.DateField(format="%m/%y", required=False)
     class Meta:
-        model = Model
+        model = Models
         fields = ['id', 'name', 'date_start', 'date_end']
 
-class CarSerializer(serializers.ModelSerializer):
+class VehicleTypeSerializer(serializers.ModelSerializer):
     date_start = serializers.DateField(format="%m/%y", required=False)
     date_end   = serializers.DateField(format="%m/%y", required=False)
     class Meta:
-        model = Car
+        model = Types
         fields = ['id', 'name', 'kw', 'cv', 'date_start', 'date_end']
 
-class CVSerializer(serializers.ModelSerializer):
-    date_start = serializers.DateField(format="%m/%y", required=False)
-    date_end   = serializers.DateField(format="%m/%y", required=False)
+class VehicleDisplacementSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CommercialVehicle
-        fields = ['id', 'name', 'kw', 'cv', 'date_start', 'date_end']
+        model = Displacements
+        fields = ['id', 'value']
 
-class MotorBikeSerializer(serializers.ModelSerializer):
-    years = serializers.SlugRelatedField(many=True, read_only=True, slug_field='value')
+class VehicleYearSerializer(serializers.ModelSerializer):
     class Meta:
-        model = MotorBike
-        fields = ['id', 'brand', 'model', 'displacement', 'years']
+        model = Years
+        fields = ['id', 'value']
