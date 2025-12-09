@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from .choices import VehicleCategory
 from .models import Brands, Types, Models, Years, DisplacementYear, Displacements
 from .serializers import VehicleBrandSerializer, VehicleModelSerializer, VehicleTypeSerializer, VehicleYearSerializer, \
-    VehicleDisplacementSerializer
+    VehicleDisplacementSerializer, DisplacementYearSerializer
 
 
 def check_access(request):
@@ -71,8 +71,12 @@ def get_displacements(request):
     model_id = request.headers.get('Model-Id')
     raw = request.headers.get('Vehicle-Type')
     code = VehicleCategory.parse(raw)
+
     if not (brand_id and model_id and code):
         return Response({"error": "Invalid or missing Brand-Id, Model-Id or Vehicle-Type."}, status=400)
+
+    if code != VehicleCategory.BIKE:
+        return Response({"error": "Invalid Vehicle-Type."}, status=400)
 
     qs = Displacements.objects.filter(brand_id=brand_id, model_id=model_id, model__vehicle_type=code).order_by('value')
     return Response(VehicleDisplacementSerializer(qs, many=True).data)
@@ -91,5 +95,5 @@ def get_years(request):
     if code != VehicleCategory.BIKE:
         return Response({"error": "Invalid Vehicle-Type."}, status=400)
 
-    qs = Years.objects.filter(displacementyear__displacement_id=displacement_id).distinct().order_by('value')
-    return Response(VehicleYearSerializer(qs, many=True).data)
+    qs = DisplacementYear.objects.filter(displacement_id=displacement_id).distinct().order_by('year__value')
+    return Response(DisplacementYearSerializer(qs, many=True).data)

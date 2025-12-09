@@ -1,13 +1,17 @@
 from django.contrib import admin
+from import_export.admin import ImportExportModelAdmin
 
 from vehicles.choices import VehicleCategory
 from vehicles.models import Brands, Models, Types, Years, DisplacementYear, Displacements
 from django.utils.translation import gettext_lazy as _
 
+from vehicles.resources import BrandsResource, ModelsResource, TypesResource, DisplacementsResource, YearsResource, \
+    DisplacementYearResource
+
 
 class DisplacementYearInline(admin.TabularInline):
     model = DisplacementYear
-    exclude = ('sync_id',)
+    exclude = ('sync_id', 'slug')
     extra = 0
 
 class ModelFilter(admin.SimpleListFilter):
@@ -34,29 +38,46 @@ class ModelFilter(admin.SimpleListFilter):
         return queryset
 
 @admin.register(Brands)
-class BrandAdmin(admin.ModelAdmin):
-    list_display = ("name",)
+class BrandAdmin(ImportExportModelAdmin):
+    resource_class = BrandsResource
+    list_display = ("name", "slug")
     search_fields = ("name",)
     ordering = ("name",)
     plural = "brands"
+    exclude = ("created_at", "updated_at", "sync_id", "slug")
 
-    exclude = ("created_at", "updated_at", "sync_id")
+    fieldsets = (
+        ('Brand Info', {
+            'fields': ('name',)
+        }),
+    )
+
 
 @admin.register(Models)
-class ModelAdmin(admin.ModelAdmin):
-    list_display = ("brand", "name", "vehicle_type", "date_start", "date_end")
+class ModelAdmin(ImportExportModelAdmin):
+    resource_class = ModelsResource
+    list_display = ("brand", "name", "slug", "vehicle_type", "date_start", "date_end")
     search_fields = ("name",)
     ordering = ("name",)
     list_filter = ("brand", "vehicle_type")
     plural = "models"
+    exclude = ("created_at", "updated_at", "sync_id", "slug")
 
-    exclude = ("created_at", "updated_at", "sync_id")
+    fieldsets = (
+        ('Model Info', {
+            'fields': ('brand', 'name','vehicle_type')
+        }),
+        ('Production Dates', {
+            'fields': ('date_start', 'date_end')
+        }),
+    )
 
 @admin.register(Types)
-class TypeAdmin(admin.ModelAdmin):
+class TypeAdmin(ImportExportModelAdmin):
+    resource_class = TypesResource
     model_vehicle_types = [VehicleCategory.CAR, VehicleCategory.CV]
 
-    list_display = ("brand", "model", "name", "kw", "cv", "date_start", "date_end")
+    list_display = ("brand", "model", "name", "slug", "kw", "cv", "date_start", "date_end")
     fieldsets = (
         ('Vehicle Info', {
             'fields': ('brand', 'model', 'name')
@@ -68,12 +89,12 @@ class TypeAdmin(admin.ModelAdmin):
             'fields': ('date_start', 'date_end')
         }),
     )
-
     list_filter = ("brand", ModelFilter)
-    exclude = ("created_at", "updated_at", "sync_id")
+    exclude = ("created_at", "updated_at", "sync_id", "slug")
 
 @admin.register(Displacements)
-class DisplacementsAdmin(admin.ModelAdmin):
+class DisplacementsAdmin(ImportExportModelAdmin):
+    resource_class = DisplacementsResource
     model_vehicle_types = [VehicleCategory.BIKE]
 
     list_display = ("brand", "model", "value")
@@ -91,8 +112,16 @@ class DisplacementsAdmin(admin.ModelAdmin):
     inlines = (DisplacementYearInline, )
 
 @admin.register(Years)
-class YearsAdmin(admin.ModelAdmin):
+class YearsAdmin(ImportExportModelAdmin):
+    resource_class = YearsResource
     list_display = ('value',)
     search_fields = ('value',)
 
     exclude = ("created_at", "updated_at", "sync_id")
+
+@admin.register(DisplacementYear)
+class DisplacementYearAdmin(ImportExportModelAdmin):
+    resource_class = DisplacementYearResource
+    list_display = ('displacement', 'year', 'slug')
+    list_filter = ('year',)
+    search_fields = ('displacement__brand__name',)

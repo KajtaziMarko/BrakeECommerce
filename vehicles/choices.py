@@ -14,11 +14,16 @@ class VehicleCategory(models.TextChoices):
         if value in cls.values:
             return value
 
+        aliases = {'truck': 't'}
+        if value.lower() in aliases:
+            return aliases[value.lower()]
+
         for m in cls:
             if m.label.lower() == value.lower():
                 return m.value
-        name = value.upper()
 
+        name = value.upper()
         if name in cls.names:
             return cls[name].value
         return None
+

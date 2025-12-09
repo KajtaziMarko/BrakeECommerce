@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
+
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
@@ -94,6 +95,89 @@ class AttributeValue(TimeStampedModel):
         return f"{self.attribute.name}: {self.value}"
 
 
+class ProductVehicleCompatibility(TimeStampedModel):
+    product = models.ForeignKey(
+        'Product',
+        on_delete=models.CASCADE,
+        related_name='vehicle_compatibilities'
+    )
+
+    vehicle_type = models.ForeignKey(
+        'vehicles.Types',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        help_text="For cars/CVs"
+    )
+
+    displacement_year = models.ForeignKey(
+        'vehicles.DisplacementYear',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        help_text="For bikes"
+    )
+
+    notes = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['product']),
+            models.Index(fields=['vehicle_type']),
+            models.Index(fields=['displacement_year']),
+        ]
+        constraints = [
+            # Ensure exactly ONE vehicle reference is set
+            models.CheckConstraint(
+                check=(
+                        models.Q(vehicle_type__isnull=False, displacement_year__isnull=True) |
+                        models.Q(vehicle_type__isnull=True, displacement_year__isnull=False)
+                ),
+                name='exactly_one_vehicle_reference'
+            ),
+
+            # Prevent duplicate product-vehicle combinations
+            models.UniqueConstraint(
+                fields=['product', 'vehicle_type'],
+                name='unique_product_type',
+                condition=models.Q(vehicle_type__isnull=False)
+            ),
+
+            models.UniqueConstraint(
+                fields=['product', 'displacement_year'],
+                name='unique_product_displacement',
+                condition=models.Q(displacement_year__isnull=False)
+            ),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        # Ensure exactly one vehicle reference
+        has_type = self.vehicle_type is not None
+        has_dy = self.displacement_year is not None
+
+        if not has_type and not has_dy:
+            raise ValidationError("Must specify either vehicle_type or displacement_year")
+
+        if has_type and has_dy:
+            raise ValidationError("Cannot specify both vehicle_type and displacement_year")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    @property
+    def vehicle(self):
+        """Returns the actual vehicle object regardless of type"""
+        return self.vehicle_type or self.displacement_year
+
+    def __str__(self):
+        vehicle = self.vehicle_type or self.displacement_year
+        return f"{self.product.sku} → {vehicle}"
+
+
+
 class Product(TimeStampedModel):
     # Identity
     name = models.CharField(max_length=190)
@@ -107,8 +191,8 @@ class Product(TimeStampedModel):
 
     # Merchandising & content
     description = models.TextField(blank=True, default="")
-    is_active = models.BooleanField(default=True)       # can be sold
-    visible = models.BooleanField(default=True)         # shown on site / search
+    is_active = models.BooleanField(default=True)  # can be sold
+    visible = models.BooleanField(default=True)  # shown on site / search
     is_featured = models.BooleanField(default=False)
 
     # Identifiers useful for auto parts
@@ -119,13 +203,14 @@ class Product(TimeStampedModel):
     price = models.DecimalField(
         max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal("0"))]
     )
-    price_compare_at = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    price_compare_at = models.DecimalField(max_digits=12, decimal_places=2, null=True,
+                                           blank=True)  # pokazano od kolku e namalena cena (pogolema od price)
     promo_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     promo_starts_at = models.DateTimeField(null=True, blank=True)
     promo_ends_at = models.DateTimeField(null=True, blank=True)
     vat_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
 
-    # Inventory snapshot (consider StockMovement for audits)
+    # Inventory snapshot
     stock_qty = models.IntegerField(default=0)
 
     # Shipping/physicals
@@ -166,6 +251,7 @@ class Product(TimeStampedModel):
 
 class ProductImage(TimeStampedModel):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="images")
+    name = models.CharField(max_length=190)
     image = models.ImageField(upload_to="product-images/")
     alt_text = models.CharField(max_length=190, blank=True, default="")
     is_primary = models.BooleanField(default=False)

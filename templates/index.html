@@ -3,385 +3,289 @@
 
 {% block extra_head %}
     <style>
-        .icon {
-            width: 40px;
-            height: 40px;
-            display: inline-block;
-            background-color: currentColor;
-            -webkit-mask: var(--icon) no-repeat center/contain;
-            mask: var(--icon) no-repeat center/contain;
-        }
-
-        .icon-car {
-            --icon: url("{% static 'icons/car.svg' %}");
-        }
-
-        .icon-bike {
-            --icon: url("{% static 'icons/bike.svg' %}");
-        }
-
-        .icon-truck {
-            --icon: url("{% static 'icons/truck.svg' %}");
-        }
-
-        /* colors for states */
-        .btn-type-group .btn {
-            color: var(--bs-danger);
-            border: none;
-        }
-
-        .btn-type-group .btn:hover {
-            color: #fff;
-        }
-
-        .btn-type-group .btn.active {
-            color: #fff;
-            background-color: var(--bs-danger);
-            border-color: var(--bs-danger);
-        }
-
-        .select-pill {
-            background: transparent;
-            color: #e9edf1;
-            border: 2px solid rgba(255, 255, 255, .28);
-            padding: .65rem 1rem;
-            box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .06);
-        }
-
-        .select-pill:active {
-            border-color: rgba(255, 255, 255, .9);
-            box-shadow: 0 0 0 .25rem rgba(255, 255, 255, .15);
-        }
-
-        .select-pill:disabled {
-            color: rgba(255, 255, 255, .45);
-            border-color: rgba(255, 255, 255, .18);
-            background: transparent;
-            opacity: 1;
-        }
-
-        .select-pill:invalid {
-            border-color: #ffffff;
-            color: #ffffff;
+        .vehicle-type-select-button input {
+            display: none;
         }
     </style>
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid vh-100 d-flex align-items-md-center justify-content-center py-3"
-         style="background: url('{% static 'images/background.png' %}') center/cover no-repeat;">
-
-        <div class="container px-lg-5 mx-lg-5 px-4 h-50">
-            <div class="row justify-content-between btn-type-group mb-5 pb-2 px-lg-5">
-                <button class="btn btn-outline-danger col-4 d-flex align-items-center justify-content-center active"
-                        data-vehicleType="Car">
-                    <span class="icon icon-car m-0 p-0"></span>
-                    <span class="ms-2 p-0 d-none d-md-inline">Car</span>
-                </button>
-                <button class="btn btn-outline-danger col-4 d-flex align-items-center justify-content-center"
-                        data-vehicleType="Motorbike">
-                    <span class="icon icon-bike m-0 p-0"></span>
-                    <span class="ms-2 p-0 d-none d-md-inline">Motorbike</span>
-                </button>
-                <button class="btn btn-outline-danger col-4 d-flex align-items-center justify-content-center"
-                        data-vehicleType="Commercial Vehicle">
-                    <span class="icon icon-truck m-0 p-0"></span>
-                    <span class="ms-2 p-0 d-none d-md-inline">Commercial Vehicle</span>
-                </button>
+    <div class="container-fluid">
+        <div class="container d-flex justify-content-center" id="vehicle-type-wrapper">
+            <div class="d-flex justify-content-center align-items-center vehicle-type-select-button">
+                <input type="radio" id="car-button" name="vehicle-type-selector" value="Car" class="btn btn-primary"
+                       checked>
+                <label for="car-button" class="btn btn-primary">Car</label>
             </div>
 
-            <div class="mt-5">
-                <form action="{% url 'catalogue' %}" method="get">
-                    <input type="hidden" name="vehicle" id="vehicleTypeInput" value="Car">
-                    <div class="row justify-content-between">
-                        <div class="col-lg-4 col-12 ps-lg-0 pe-lg-2 p-0 mb-2">
-                            <select name="brand" class="form-select select-pill rounded-3" id="brandSelect"
-                                    aria-label="Select Brand" required>
-                                <option value="" disabled selected hidden>Select Brand</option>
-                                {% for brand in brands %}
-                                    <option value="{{ brand.id }}">{{ brand.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+            <div class="d-flex justify-content-center align-items-center vehicle-type-select-button">
+                <input type="radio" id="motorbike-button" name="vehicle-type-selector" value="Motorbike"
+                       class="btn btn-primary">
+                <label for="motorbike-button" class="btn btn-primary">Motorbike</label>
+            </div>
 
-                        <div class="col-lg-4 col-12 px-lg-2 p-0 mb-2">
-                            <select name="model" class="form-select select-pill rounded-3" id="modelSelect"
-                                    aria-label="Select Model" required
-                                    disabled>
-                                <option value="" disabled selected hidden>Select Model</option>
-                            </select>
-                        </div>
-
-                        <div class="col-lg-4 col-12 pe-lg-0 ps-lg-2 p-0 mb-2" hidden>
-                            <select name="type" class="form-select select-pill rounded-3" id="typeSelect"
-                                    aria-label="Select Type" required disabled>
-                                <option value="" disabled selected hidden>Select Type</option>
-                            </select>
-                        </div>
-
-                        <div class="col-lg-2 col-12 ps-lg-2 p-0 mb-2">
-                            <select name="displacement" class="form-select select-pill rounded-3" id="dispSelect"
-                                    aria-label="Select Type" required disabled>
-                                <option value="" disabled selected hidden>Select Displacement</option>
-                            </select>
-                        </div>
-
-                        <div class="col-lg-2 col-12 pe-lg-0 ps-lg-2 p-0 mb-2">
-                            <select name="year" class="form-select select-pill rounded-3" id="yearSelect"
-                                    aria-label="Select Type" required disabled>
-                                <option value="" disabled selected hidden>Select Year</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row mt-3 justify-content-center">
-                        <button type="submit" class="col-md-4 col-sm-12 btn btn-danger rounded-3 fw-bolder">Search
-                        </button>
-                    </div>
-                </form>
+            <div class="d-flex justify-content-center align-items-center vehicle-type-select-button">
+                <input type="radio" id="cv-button" name="vehicle-type-selector" value="Commercial Vehicle"
+                       class="btn btn-primary">
+                <label for="cv-button" class="btn btn-primary">Commercial Vehicle</label>
             </div>
         </div>
-    </div>
+        <div class="container">
+            <form action="" id="vehicle-select-form" method="GET">
+                <select name="brand-select" id="brand-select" class="form-select" data-placeholder-text="Brand"
+                        required>
+                    <option value="" disabled selected>Select Brand</option>
+                    {% for brand in brands %}
+                        <option value="{{ brand.id }}">{{ brand.name }}</option>
+                    {% endfor %}
+                </select>
 
-    <div class="container-fluid bg-black vh-100">
+                <select name="model-select" id="model-select" class="form-select" data-placeholder-text="Model"
+                        disabled required>
+                    <option value="" disabled selected>Select Model</option>
+                </select>
 
+                <select name="type-select" id="type-select" class="form-select" data-placeholder-text="Type" disabled
+                        required>
+                    <option value="" disabled selected>Select Type</option>
+                </select>
+
+                <select name="displacement-select" id="displacement-select" class="form-select"
+                        data-placeholder-text="Displacement" disabled hidden="hidden">
+                    <option value="" disabled selected>Select Displacement</option>
+                </select>
+
+                <select name="year-select" id="year-select" class="form-select" data-placeholder-text="Year" disabled
+                        hidden="hidden">
+                    <option value="" disabled selected>Select Year</option>
+                </select>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+        </div>
     </div>
 {% endblock %}
 
 {% block extra_scripts %}
     <script>
-        const vehicleTypeButtons = document.querySelectorAll('.btn-type-group .btn');
-        const brandSelect = document.querySelector('#brandSelect');
-        const modelSelect = document.querySelector('#modelSelect');
-        const typeSelect = document.querySelector('#typeSelect');
-        const dispSelect = document.querySelector('#dispSelect');
-        const yearSelect = document.querySelector('#yearSelect');
-
-        const typeCol = typeSelect.parentElement;
-        const dispCol = dispSelect.parentElement;
-        const yearCol = yearSelect.parentElement;
-
+        const wrapper = document.getElementById('vehicle-type-wrapper');
         let vehicleType = "Car";
-        let bikeTypesByDisp = new Map();
+        const form = document.getElementById('vehicle-select-form')
+        const brandSelect = document.getElementById('brand-select');
+        const modelSelect = document.getElementById('model-select');
+        const typeSelect = document.getElementById('type-select');
+        const displacementSelect = document.getElementById('displacement-select');
+        const yearSelect = document.getElementById('year-select');
 
-        function resetSelect(selectEl, placeholder) {
-            selectEl.innerHTML = `<option value="" disabled selected hidden>${placeholder}</option>`;
-            selectEl.disabled = true;
-            selectEl.value = "";
-        }
-
-        function fillOptions(selectEl, items, placeholder, format = v => v, valueOf = v => v) {
-            resetSelect(selectEl, placeholder);
-            if (!items || !items.length) return;
-            const frag = document.createDocumentFragment();
-            items.forEach(v => {
-                const opt = document.createElement('option');
-                opt.value = valueOf(v);
-                opt.textContent = format(v);
-                frag.appendChild(opt);
-            });
-            selectEl.appendChild(frag);
-            selectEl.disabled = true;
-        }
-
-        function applyVehicleTypeUI() {
-            const isBike = (vehicleType === 'Motorbike');
-
-            typeCol.hidden = isBike;
-            typeSelect.required = !isBike;
-            if (isBike) resetSelect(typeSelect, 'Select Type');
-
-            dispCol.hidden = !isBike;
-            yearCol.hidden = !isBike;
-
-            dispSelect.required = isBike;
-            yearSelect.required = isBike;
-
-            resetSelect(dispSelect, 'Select Displacement');
-            resetSelect(yearSelect, 'Select Year');
-        }
-
-        const vehicleTypeInput = document.querySelector('#vehicleTypeInput');
-        const activeBtn = document.querySelector('.btn-type-group .btn.active');
-        if (activeBtn) vehicleTypeInput.value = activeBtn.getAttribute('data-vehicleType');
-
-        vehicleTypeButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                vehicleTypeButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                vehicleType = btn.getAttribute('data-vehicleType');
-                vehicleTypeInput.value = vehicleType;
-
-                resetSelect(modelSelect, 'Select Model');
-                resetSelect(typeSelect, 'Select Type');
-                resetSelect(dispSelect, 'Select Displacement');
-                resetSelect(yearSelect, 'Select Year');
-                applyVehicleTypeUI();
-
-                fetch('/api/brands/', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Vehicle-Type': vehicleType,
-                    }
-                })
-                    .then(r => {
-                        if (!r.ok) throw new Error('Failed to fetch brands');
-                        return r.json();
-                    })
-                    .then(data => {
-                        brandSelect.innerHTML = '<option value="" disabled selected hidden>Select Brand</option>';
-                        (data || []).forEach(brand => {
-                            const opt = document.createElement('option');
-                            opt.value = brand.id;
-                            opt.textContent = brand.name;
-                            brandSelect.appendChild(opt);
-                        });
-                        brandSelect.disabled = false;
-                        modelSelect.disabled = true;
-                    })
-                    .catch(err => console.error('Error loading brands:', err));
-            });
-        });
-
-        brandSelect.addEventListener('change', () => {
-            const brandId = brandSelect.value;
-            if (!brandId) return;
-
-            resetSelect(modelSelect, 'Select Model');
-            resetSelect(typeSelect, 'Select Type');
-            resetSelect(dispSelect, 'Select Displacement');
-            resetSelect(yearSelect, 'Select Year');
-
-            fetch('/api/models/', {
+        function fetchBrands(vehicleType) {
+            return fetch('/api/brands/', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Brand-Id': brandId,
                     'Vehicle-Type': vehicleType,
                 }
-            })
-                .then(r => {
-                    if (!r.ok) throw new Error('Failed to fetch models');
-                    return r.json();
-                })
-                .then(data => {
-                    modelSelect.innerHTML = '<option value="" disabled selected hidden>Select Model</option>';
-                    (data || []).forEach(model => {
-                        const opt = document.createElement('option');
-                        opt.value = model.id;
-                        opt.textContent = `${model.name} ${model.date_start} - ${model.date_end}`;
-                        modelSelect.appendChild(opt);
-                    });
-                    modelSelect.disabled = false;
-                })
-                .catch(err => console.error('Error loading models:', err));
-        });
+            }).then(r => {
+                if (!r.ok) throw new Error('Failed to fetch brands.');
+                return r.json();
+            }).then(data => {
+                return data;
+            }).catch(err => console.error('Error loading brands:', err));
+        }
 
-        modelSelect.addEventListener('change', () => {
-            const brandId = brandSelect.value;
-            const modelId = modelSelect.value;
-            if (!brandId || !modelId) return;
+        function fetchModels(vehicleType, brandId) {
+            return fetch('/api/models/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Vehicle-Type': vehicleType,
+                    'Brand-Id': brandId
+                }
+            }).then(r => {
+                if (!r.ok) throw new Error('Failed to fetch models.');
+                return r.json();
+            }).then(data => {
+                return data;
+            }).catch(err => console.error('Error loading models:', err));
+        }
 
-            if (vehicleType === 'Motorbike') {
-                fetch('/api/displacements/', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Brand-Id': brandId,
-                        'Model-Id': modelId,
-                        'Vehicle-Type': vehicleType,
-                    }
-                })
-                    .then(r => {
-                        if (!r.ok) throw new Error('Failed to fetch motorbikes');
-                        return r.json();
-                    })
-                    .then(data => {
-                        dispSelect.innerHTML = '<option value="" disabled selected hidden>Select Displacement</option>';
-                        (data || []).forEach(d => {
-                            const opt = document.createElement('option');
-                            opt.value = d.id;
-                            opt.textContent = `${d.value}cc`;
-                            dispSelect.appendChild(opt);
-                        });
-                        dispSelect.disabled = false;
-                        dispSelect.required = true;
-                    })
-                    .catch(err => {
-                        console.error('Error loading motorbike filters:', err);
-                        resetSelect(dispSelect, 'Select Displacement');
-                        resetSelect(yearSelect, 'Select Year');
-                    });
-            } else {
-                fetch('/api/types/', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Brand-Id': brandId,
-                        'Model-Id': modelId,
-                        'Vehicle-Type': vehicleType,
-                    }
-                })
-                    .then(r => {
-                        if (!r.ok) throw new Error('Failed to fetch types');
-                        return r.json();
-                    })
-                    .then(data => {
-                        typeSelect.innerHTML = '<option value="" disabled selected hidden>Select Type</option>';
-                        (data || []).forEach(t => {
-                            const opt = document.createElement('option');
-                            opt.value = t.id;
-                            opt.textContent = `${t.name} ${t.kw}kw ${t.cv}cv ${t.date_start} - ${t.date_end}`;
-                            typeSelect.appendChild(opt);
-                        });
-                        typeSelect.disabled = false;
-                        typeSelect.required = true;
-                    })
-                    .catch(err => {
-                        console.error('Error loading types:', err);
-                        resetSelect(typeSelect, 'Select Type');
-                    });
+        function fetchTypes(vehicleType, brandId, modelId) {
+            return fetch('/api/types/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Vehicle-Type': vehicleType,
+                    'Brand-Id': brandId,
+                    'Model-Id': modelId
+                }
+            }).then(r => {
+                if (!r.ok) throw new Error('Failed to fetch types.');
+                return r.json();
+            }).then(data => {
+                return data;
+            }).catch(err => console.error('Error loading types:', err));
+        }
+
+        function fetchDisplacements(vehicleType, brandId, modelId) {
+            return fetch('/api/displacements/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Vehicle-Type': vehicleType,
+                    'Brand-Id': brandId,
+                    'Model-Id': modelId
+                }
+            }).then(r => {
+                if (!r.ok) throw new Error('Failed to fetch displacements.');
+                return r.json();
+            }).then(data => {
+                return data;
+            }).catch(err => console.error('Error loading displacements:', err));
+        }
+
+        function fetchYears(vehicleType, brandId, modelId, displacementId) {
+            return fetch('/api/years/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Vehicle-Type': vehicleType,
+                    'Brand-Id': brandId,
+                    'Model-Id': modelId,
+                    'Displacement-Id': displacementId
+                }
+            }).then(r => {
+                if (!r.ok) throw new Error('Failed to fetch years.');
+                return r.json();
+            }).then(data => {
+                return data;
+            }).catch(err => console.error('Error loading years:', err));
+        }
+
+        function getSelectedSlug(select) {
+            const selectedOption = select.options[select.selectedIndex];
+            return selectedOption?.dataset?.slug || '';
+        }
+
+        function normalizeVehicleType(type) {
+            return type.toLowerCase().replace(/\s+/g, '-');
+        }
+
+        function setVisibility(element, show) {
+            element.hidden = !show;
+            element.required = show;
+        }
+
+        function resetSelect(select) {
+            const placeholderText = select.dataset.placeholderText;
+            select.innerHTML = ''
+
+            const defaultOption = document.createElement('option');
+            defaultOption.text = `Select ${placeholderText}`;
+            defaultOption.selected = true;
+            defaultOption.disabled = true;
+            defaultOption.value = "";
+            select.appendChild(defaultOption);
+
+            select.disabled = true
+        }
+
+        function populateSelect(select, data, valueKey = 'id', textKey = 'name', slugKey = 'slug') {
+            select.innerHTML = '';
+            resetSelect(select);
+
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item[valueKey];
+                option.textContent = item[textKey];
+
+                if (item[slugKey]) {
+                    option.dataset.slug = item[slugKey];
+                }
+
+                select.appendChild(option);
+            });
+
+            select.disabled = false;
+        }
+
+        wrapper.addEventListener('change', async (e) => {
+            const el = e.target;
+            if (el.matches('input[name="vehicle-type-selector"]')) {
+                vehicleType = el.value;
+                let brandsData = await fetchBrands(vehicleType);
+
+                resetSelect(modelSelect);
+                resetSelect(typeSelect);
+                resetSelect(displacementSelect);
+                resetSelect(yearSelect);
+
+                populateSelect(brandSelect, brandsData);
+
+                if (vehicleType === "Motorbike") {
+                    setVisibility(displacementSelect, true);
+                    setVisibility(yearSelect, true);
+                    setVisibility(typeSelect, false);
+                } else {
+                    setVisibility(displacementSelect, false);
+                    setVisibility(yearSelect, false);
+                    setVisibility(typeSelect, true);
+                }
             }
         });
 
-        dispSelect.addEventListener('change', () => {
+        brandSelect.addEventListener('change', async () => {
             const brandId = brandSelect.value;
-            const modelId = modelSelect.value;
-            const displacementId = dispSelect.value;
-            if (!brandId || !modelId || !displacementId) return;
+            let modelsData = await fetchModels(vehicleType, brandId);
 
-            fetch('/api/years/', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Brand-Id': brandId,
-                    'Model-Id': modelId,
-                    'Displacement-Id': displacementId,
-                    'Vehicle-Type': vehicleType,
-                }
-            })
-                .then(r => {
-                    if (!r.ok) throw new Error('Failed to fetch years');
-                    return r.json();
-                })
-                .then(data => {
-                    yearSelect.innerHTML = '<option value="" disabled selected hidden>Select Year</option>';
-                    (data || []).forEach(year => {
-                        const opt = document.createElement('option');
-                        opt.value = year.id;
-                        opt.textContent = `${year.value}`;
-                        yearSelect.appendChild(opt);
-                    });
-                    yearSelect.disabled = false;
-                    yearSelect.required = true;
-                })
-                .catch(err => {
-                    console.error('Error loading years:', err);
-                    resetSelect(yearSelect, 'Select Year');
-                });
+            resetSelect(modelSelect);
+            resetSelect(typeSelect);
+            resetSelect(displacementSelect);
+            resetSelect(yearSelect);
+
+            populateSelect(modelSelect, modelsData);
         });
 
-        applyVehicleTypeUI();
+        modelSelect.addEventListener('change', async () => {
+            const brandId = brandSelect.value;
+            const modelId = modelSelect.value;
+            resetSelect(typeSelect);
+            resetSelect(displacementSelect);
+            resetSelect(yearSelect);
+
+            if (vehicleType === "Motorbike") {
+                let displacementsData = await fetchDisplacements(vehicleType, brandId, modelId);
+                populateSelect(displacementSelect, displacementsData, 'id', 'value');
+            } else {
+                let typesData = await fetchTypes(vehicleType, brandId, modelId);
+                populateSelect(typeSelect, typesData);
+            }
+        });
+
+        displacementSelect.addEventListener('change', async () => {
+            const brandId = brandSelect.value;
+            const modelId = modelSelect.value;
+            const displacementId = displacementSelect.value;
+            resetSelect(yearSelect);
+
+            let yearsData = await fetchYears(vehicleType, brandId, modelId, displacementId);
+            populateSelect(yearSelect, yearsData, 'id', 'value')
+        });
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const normalizedVehicleType = normalizeVehicleType(vehicleType);
+            let slug, vehicleId;
+
+            if (vehicleType === "Motorbike") {
+                slug = getSelectedSlug(yearSelect);
+                vehicleId = yearSelect.value;
+            } else {
+                slug = getSelectedSlug(typeSelect);
+                vehicleId = typeSelect.value;
+            }
+
+            const url = `/catalogue/${normalizedVehicleType}/${slug}/${vehicleId}`;
+            window.location.href = url;
+        });
+
     </script>
 {% endblock %}

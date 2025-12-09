@@ -7,9 +7,11 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('chaining/', include('smart_selects.urls')),
 
+    # SITES
     path('', main_views.home, name='home'),
-    path('catalogue/', main_views.catalogue, name='catalogue'),
+    path('catalogue/<str:vehicle_type>/<slug:slug>/<int:vehicle_id>/', main_views.catalogue, name='catalogue'),
 
+    # API CALLS
     path('api/brands/', vehicles_views.get_brands, name='get_brands'),
     path('api/models/', vehicles_views.get_models, name='get_models'),
     path('api/types/', vehicles_views.get_types, name='get_types'),

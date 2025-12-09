@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Brands, Models, Types, Years, Displacements
+from .models import Brands, Models, Types, Years, Displacements, DisplacementYear
 
 
 class VehicleBrandSerializer(serializers.ModelSerializer):
@@ -17,9 +17,10 @@ class VehicleModelSerializer(serializers.ModelSerializer):
 class VehicleTypeSerializer(serializers.ModelSerializer):
     date_start = serializers.DateField(format="%m/%y", required=False)
     date_end   = serializers.DateField(format="%m/%y", required=False)
+
     class Meta:
         model = Types
-        fields = ['id', 'name', 'kw', 'cv', 'date_start', 'date_end']
+        fields = ['id', 'name', 'kw', 'cv', 'date_start', 'date_end', 'slug']
 
 class VehicleDisplacementSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,3 +31,10 @@ class VehicleYearSerializer(serializers.ModelSerializer):
     class Meta:
         model = Years
         fields = ['id', 'value']
+
+class DisplacementYearSerializer(serializers.ModelSerializer):
+    value = serializers.CharField(source='year.value', read_only=True)
+
+    class Meta:
+        model = DisplacementYear
+        fields = ['id', 'value', 'slug']

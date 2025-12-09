@@ -1,18 +1,23 @@
 # vehicles/models.py
-import code
-
 from django.db import models
 from django.db.models import Q
+from django.template.defaultfilters import slugify
 from smart_selects.db_fields import ChainedForeignKey
 
 from vehicles.choices import VehicleCategory
 
 class Brands(models.Model):
-    sync_id = models.BigIntegerField(null=True, blank=True)
+    sync_id = models.BigIntegerField(null=True, blank=True, unique=True)
+    brembo_code = models.CharField(null=True, blank=True, unique=True)
+
     name = models.CharField(max_length=50, null=False, blank=False, unique=True)
-    slug = models.SlugField(null=False, blank=False, unique=True)
+    slug = models.SlugField(null=True, blank=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True, null=False, blank=False)
     updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+
+    def save(self, *args, **kwargs):
+        self.slug = slugify(f"{self.name}")
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -22,17 +27,22 @@ class Brands(models.Model):
 
 
 class Models(models.Model):
-    sync_id = models.BigIntegerField(null=True, blank=True)
+    sync_id = models.BigIntegerField(null=True, blank=True, unique=True)
+    brembo_code = models.CharField(null=True, blank=True, unique=True)
     brand = models.ForeignKey(Brands, on_delete=models.CASCADE)
 
     vehicle_type = models.CharField(max_length=1, choices=VehicleCategory.choices, null=False, blank=False, default=VehicleCategory.CAR)
-    name = models.CharField(max_length=50, null=False, blank=False)
-    slug = models.SlugField(null=False, blank=False, unique=True)
+    name = models.CharField(max_length=255, null=False, blank=False)
+    slug = models.SlugField(max_length=255, null=True, blank=True)
     date_start = models.DateField(null=True, blank=True)
     date_end = models.DateField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, null=False, blank=False)
     updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+
+    def save(self, *args, **kwargs):
+        self.slug = slugify(f"{self.name}")
+        super().save(*args, **kwargs)
 
     def __str__(self):
         full_date = f"{self.date_start.strftime("%m/%y")}-{self.date_end.strftime("%m/%y")}" if self.date_start and self.date_end else ""
@@ -46,7 +56,9 @@ class Models(models.Model):
 
 
 class Types(models.Model):
-    sync_id = models.BigIntegerField(null=True, blank=True)
+    sync_id = models.BigIntegerField(null=True, blank=True, unique=True)
+    brembo_code = models.CharField(null=True, blank=True)
+
     brand = models.ForeignKey(Brands, on_delete=models.CASCADE, blank=False, null=False)
     model = ChainedForeignKey(
         Models, chained_field="brand", chained_model_field="brand",
@@ -55,30 +67,41 @@ class Types(models.Model):
         null=False, blank=False
     )
 
+    name = models.CharField(max_length=255, null=False, blank=False)
+    slug = models.SlugField(max_length=255, null=True, blank=True)
 
-    name = models.CharField(max_length=50, null=False, blank=False)
-    slug = models.SlugField(null=False, blank=False, unique=True)
     kw = models.IntegerField(null=False, blank=False)
     cv = models.IntegerField(null=False, blank=False)
+
     date_start = models.DateField(null=True, blank=True)
     date_end = models.DateField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True, null=False, blank=False)
     updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
 
+    def save(self, *args, **kwargs):
+        brand_slug = getattr(self.brand, "slug", None) or getattr(self.brand, "name", "")
+        model_slug = getattr(self.model, "slug", None) or getattr(self.model, "name", "")
+
+        self.slug = slugify(f"{brand_slug} {model_slug} {self.name}")
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        start_date = self.date_start.strftime("%m/%y")
-        end_date = self.date_end.strftime("%m/%y")
+        start_date = self.date_start.strftime("%m/%y") if self.date_start else "?"
+        end_date = self.date_end.strftime("%m/%y") if self.date_end else "now"
         return f"{self.name} kw: {self.kw} cv: {self.cv} {start_date} - {end_date}"
 
     class Meta:
         verbose_name_plural = "Types"
         indexes = [
-            models.Index(fields=["brand"]),
             models.Index(fields=["model"]),
+            models.Index(fields=["slug"]),
         ]
 
+
 class Displacements(models.Model):
-    sync_id = models.BigIntegerField(null=True, blank=True)
+    sync_id = models.BigIntegerField(null=True, blank=True, unique=True)
+    brembo_code = models.CharField(null=True, blank=True, unique=True)
 
     brand = models.ForeignKey(Brands, on_delete=models.CASCADE)
     model = ChainedForeignKey(
@@ -102,10 +125,11 @@ class Displacements(models.Model):
             models.Index(fields=["model"]),
         ]
 
-class Years(models.Model):
-    sync_id = models.BigIntegerField(null=True, blank=True)
-    value = models.IntegerField(null=False, blank=False, unique=True)
 
+class Years(models.Model):
+    sync_id = models.BigIntegerField(null=True, blank=True, unique=True)
+
+    value = models.IntegerField(null=False, blank=False, unique=True)
     created_at = models.DateTimeField(auto_now_add=True, null=False, blank=False)
     updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
 
@@ -117,9 +141,28 @@ class Years(models.Model):
 
 
 class DisplacementYear(models.Model):
-    sync_id = models.BigIntegerField(null=True, blank=True)
+    sync_id = models.BigIntegerField(null=True, blank=True, unique=True)
+
+    slug = models.SlugField(max_length=255, null=True, blank=True)
     displacement = models.ForeignKey(Displacements, on_delete=models.CASCADE)
     year = models.ForeignKey(Years, on_delete=models.CASCADE)
 
+    def save(self, *args, **kwargs):
+        brand_slug = getattr(self.displacement.brand, "slug", None) or getattr(self.displacement.brand, "name", "")
+        model_slug = getattr(self.displacement.model, "slug", None) or getattr(self.displacement.model, "name", "")
+
+        self.slug = slugify(f"{brand_slug} {model_slug} {self.displacement.value} {self.year.value}")
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.displacement.brand} {self.displacement.model} {self.displacement} {self.year}"
+        return f"{self.displacement} {self.year}"
+
+    class Meta:
+        verbose_name_plural = "Displacement-Years"
+        constraints = [
+            models.UniqueConstraint(fields=['displacement', 'year'], name='unique_displacement_year'),
+        ]
+        indexes = [
+            models.Index(fields=["displacement"]),
+            models.Index(fields=["slug"]),
+        ]
