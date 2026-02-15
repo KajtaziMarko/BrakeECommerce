@@ -1,7 +1,30 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block extra_head %}
+    <style>
+        body {
+            background: #212529;
+        }
+    </style>
+{% endblock %}
 {% block content %}
-    <div class="container ps-4 m-0">
-    <h1 class="page-header">{{ brand }} > {{ model }} > {{ vehicle }}</h1>
+    <div class="container-fluid ps-4 m-0">
+        <h1 class="page-header text-danger">
+            {% if vehicle_type == 'b' %}
+                {{ vehicle.displacement.brand.name }} {{ vehicle.displacement.model.name }}
+            {% else %}
+                {{ vehicle.brand.name }} {{ vehicle.model.name }}
+            {% endif %}
+        </h1>
+        <h1 class="text-white">{{ vehicle.title }}</h1>
+
+        {% for item in categories_with_products %}
+            <div class="px-2 px-md-4 py-2 justify-content-center align-items-center bg-black rounded-4 mb-5">
+                <p class="text-white fw-bolder fs-3 m-2">{{ item.category.name }}</p>
+                {% for product in item.products %}
+                    {% include "product_card.html" with item=product %}
+                {% endfor %}
+            </div>
+        {% endfor %}
     </div>
 {% endblock %}

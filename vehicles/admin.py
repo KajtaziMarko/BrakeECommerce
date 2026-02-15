@@ -77,10 +77,11 @@ class TypeAdmin(ImportExportModelAdmin):
     resource_class = TypesResource
     model_vehicle_types = [VehicleCategory.CAR, VehicleCategory.CV]
 
+    search_fields = ('name', 'slug', 'brand__name', 'model__name')
     list_display = ("brand", "model", "name", "slug", "kw", "cv", "date_start", "date_end")
     fieldsets = (
         ('Vehicle Info', {
-            'fields': ('brand', 'model', 'name')
+            'fields': ('brand', 'model', 'name', 'sync_id')
         }),
         ('Performance', {
             'fields': ('kw', 'cv')
@@ -90,7 +91,7 @@ class TypeAdmin(ImportExportModelAdmin):
         }),
     )
     list_filter = ("brand", ModelFilter)
-    exclude = ("created_at", "updated_at", "sync_id", "slug")
+    exclude = ("created_at", "updated_at", "slug")
 
 @admin.register(Displacements)
 class DisplacementsAdmin(ImportExportModelAdmin):
@@ -122,6 +123,8 @@ class YearsAdmin(ImportExportModelAdmin):
 @admin.register(DisplacementYear)
 class DisplacementYearAdmin(ImportExportModelAdmin):
     resource_class = DisplacementYearResource
+
+    search_fields = ('slug', 'displacement__brand__name', 'displacement__model__name', 'year__value')
     list_display = ('displacement', 'year', 'slug')
     list_filter = ('year',)
     search_fields = ('displacement__brand__name',)

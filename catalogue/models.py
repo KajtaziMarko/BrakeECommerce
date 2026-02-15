@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-
+from smart_selects.db_fields import ChainedForeignKey
 
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -77,6 +77,21 @@ class Attribute(TimeStampedModel):
     def __str__(self) -> str:
         return self.name
 
+class CategoryAttribute(TimeStampedModel):
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="category_attributes")
+    attribute = models.ForeignKey(Attribute, on_delete=models.CASCADE, related_name="category_attributes")
+    required = models.BooleanField(default=False)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ("category", "attribute")
+        ordering = ["sort_order", "attribute__name"]
+
+    def __str__(self) -> str:
+        req = " (required)" if self.required else ""
+        return f"{self.category.name} → {self.attribute.name}{req}"
+
+
 
 class AttributeValue(TimeStampedModel):
     attribute = models.ForeignKey(Attribute, on_delete=models.CASCADE, related_name="values")
@@ -90,6 +105,33 @@ class AttributeValue(TimeStampedModel):
         indexes = [
             models.Index(fields=["attribute", "sort_order"]),
         ]
+
+    def clean(self):
+        input_type = self.attribute.input_type
+
+        if input_type == Attribute.InputType.INTEGER:
+            try:
+                int(self.value)
+            except ValueError:
+                raise ValidationError(f"Value '{self.value}' is not a valid integer.")
+
+        elif input_type == Attribute.InputType.DECIMAL:
+            try:
+                Decimal(self.value)
+            except Exception:
+                raise ValidationError(f"Value '{self.value}' is not a valid decimal.")
+
+        elif input_type == Attribute.InputType.BOOLEAN:
+            valid_booleans = {'true', 'false', '1', '0', 'yes', 'no'}
+            if self.value.lower() not in valid_booleans:
+                raise ValidationError(
+                    f"Value '{self.value}' is not a valid boolean. "
+                    f"Use: true, false, 1, 0, yes, or no."
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.attribute.name}: {self.value}"
@@ -107,6 +149,7 @@ class ProductVehicleCompatibility(TimeStampedModel):
         null=True,
         blank=True,
         on_delete=models.CASCADE,
+        related_name='product_compatibilities',
         help_text="For cars/CVs"
     )
 
@@ -115,6 +158,7 @@ class ProductVehicleCompatibility(TimeStampedModel):
         null=True,
         blank=True,
         on_delete=models.CASCADE,
+        related_name='product_compatibilities',
         help_text="For bikes"
     )
 
@@ -127,7 +171,6 @@ class ProductVehicleCompatibility(TimeStampedModel):
             models.Index(fields=['displacement_year']),
         ]
         constraints = [
-            # Ensure exactly ONE vehicle reference is set
             models.CheckConstraint(
                 check=(
                         models.Q(vehicle_type__isnull=False, displacement_year__isnull=True) |
@@ -136,7 +179,6 @@ class ProductVehicleCompatibility(TimeStampedModel):
                 name='exactly_one_vehicle_reference'
             ),
 
-            # Prevent duplicate product-vehicle combinations
             models.UniqueConstraint(
                 fields=['product', 'vehicle_type'],
                 name='unique_product_type',
@@ -179,7 +221,9 @@ class ProductVehicleCompatibility(TimeStampedModel):
 
 
 class Product(TimeStampedModel):
+    # compatability type CAR, CV or BIKE
     # Identity
+    sync_id = models.CharField(unique=True, null=True, blank=True, max_length=255)
     name = models.CharField(max_length=190)
     slug = models.SlugField(max_length=190, unique=True, db_index=True)
     sku = models.CharField(max_length=64, unique=True, db_index=True)
@@ -193,7 +237,7 @@ class Product(TimeStampedModel):
     description = models.TextField(blank=True, default="")
     is_active = models.BooleanField(default=True)  # can be sold
     visible = models.BooleanField(default=True)  # shown on site / search
-    is_featured = models.BooleanField(default=False)
+    is_featured = models.BooleanField(default=False) # front page section featured
 
     # Identifiers useful for auto parts
     ean = models.CharField(max_length=14, blank=True, default="", db_index=True)
@@ -203,8 +247,7 @@ class Product(TimeStampedModel):
     price = models.DecimalField(
         max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal("0"))]
     )
-    price_compare_at = models.DecimalField(max_digits=12, decimal_places=2, null=True,
-                                           blank=True)  # pokazano od kolku e namalena cena (pogolema od price)
+    price_compare_at = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)  # pokazano od kolku e namalena cena (pogolema od price)
     promo_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     promo_starts_at = models.DateTimeField(null=True, blank=True)
     promo_ends_at = models.DateTimeField(null=True, blank=True)
@@ -212,6 +255,7 @@ class Product(TimeStampedModel):
 
     # Inventory snapshot
     stock_qty = models.IntegerField(default=0)
+    reserved_qty = models.PositiveIntegerField(default=0)
 
     # Shipping/physicals
     weight_kg = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True)
@@ -248,6 +292,35 @@ class Product(TimeStampedModel):
             pass
         return True
 
+    @property
+    def available_stock(self):
+        return max(0, self.stock_qty - self.reserved_qty)
+
+    def get_missing_required_attributes(self, category=None):
+        if not self.pk:
+            existing_attr_ids = set()
+        else:
+            existing_attr_ids = set(
+                self.product_attributes.values_list('attribute_id', flat=True)
+            )
+
+        if category:
+            required_attrs = Attribute.objects.filter(
+                category_attributes__category=category,
+                category_attributes__required=True
+            )
+        else:
+            if not self.pk:
+                return []
+            category_ids = self.categories.values_list('id', flat=True)
+            required_attrs = Attribute.objects.filter(
+                category_attributes__category_id__in=category_ids,
+                category_attributes__required=True
+            ).distinct()
+
+        # Return attributes that are required but not present
+        return list(required_attrs.exclude(id__in=existing_attr_ids))
+
 
 class ProductImage(TimeStampedModel):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="images")
@@ -280,6 +353,22 @@ class ProductCategory(TimeStampedModel):
             models.Index(fields=["is_primary"]),
         ]
 
+    def clean(self):
+        if not self.pk:
+            return
+
+        missing_attrs = self.product.get_missing_required_attributes(category=self.category)
+        if missing_attrs:
+            attr_names = ", ".join(attr.name for attr in missing_attrs)
+            raise ValidationError(
+                f"Product is missing required attributes for category "
+                f"'{self.category.name}': {attr_names}"
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self) -> str:
         return f"{self.product.sku} → {self.category.slug}"
 
@@ -288,8 +377,17 @@ class ProductAttribute(TimeStampedModel):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_attributes")
     attribute = models.ForeignKey(Attribute, on_delete=models.CASCADE, related_name="product_attributes")
 
-    attribute_value = models.ForeignKey(
-        AttributeValue, null=True, blank=True, on_delete=models.CASCADE, related_name="product_attributes"
+    attribute_value = ChainedForeignKey(
+        AttributeValue,
+        chained_field="attribute",
+        chained_model_field="attribute",
+        show_all=False,
+        auto_choose=True,
+        sort=True,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="product_attributes"
     )
     value_text = models.CharField(max_length=255, blank=True, default="")
 
@@ -312,6 +410,39 @@ class ProductAttribute(TimeStampedModel):
         else:
             if self.attribute_value and self.attribute_value.attribute_id != self.attribute_id:
                 raise ValidationError("attribute_value must belong to the same attribute.")
+
+        # Validate value_text matches the expected input_type
+        value_to_check = self.attribute_value.value if self.attribute_value else self.value_text
+        if value_to_check:
+            input_type = self.attribute.input_type
+
+            if input_type == Attribute.InputType.INTEGER:
+                try:
+                    int(value_to_check)
+                except ValueError:
+                    raise ValidationError(f"Value '{value_to_check}' is not a valid integer.")
+
+            elif input_type == Attribute.InputType.DECIMAL:
+                try:
+                    Decimal(value_to_check)
+                except Exception:
+                    raise ValidationError(f"Value '{value_to_check}' is not a valid decimal.")
+
+            elif input_type == Attribute.InputType.BOOLEAN:
+                valid_booleans = {'true', 'false', '1', '0', 'yes', 'no'}
+                if value_to_check.lower() not in valid_booleans:
+                    raise ValidationError(
+                        f"Value '{value_to_check}' is not a valid boolean. "
+                        f"Use: true, false, 1, 0, yes, or no."
+                    )
+
+    def save(self, *args, **kwargs):
+        if self.attribute_value:
+            self.value_text = self.attribute_value.value
+
+        self.full_clean()
+
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         v = self.attribute_value.value if self.attribute_value else self.value_text

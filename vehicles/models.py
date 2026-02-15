@@ -79,6 +79,12 @@ class Types(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=False, blank=False)
     updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
 
+    @property
+    def title(self) -> str:
+        start = self.date_start.strftime("%m/%y") if self.date_start else "?"
+        end = self.date_end.strftime("%m/%y") if self.date_end else "now"
+        return f"{self.name} ({self.kw}kw {self.cv}cv) {start} - {end}"
+
     def save(self, *args, **kwargs):
         brand_slug = getattr(self.brand, "slug", None) or getattr(self.brand, "name", "")
         model_slug = getattr(self.model, "slug", None) or getattr(self.model, "name", "")
@@ -98,7 +104,7 @@ class Types(models.Model):
             models.Index(fields=["slug"]),
         ]
 
-
+# TODO: No need for uniqueness
 class Displacements(models.Model):
     sync_id = models.BigIntegerField(null=True, blank=True, unique=True)
     brembo_code = models.CharField(null=True, blank=True, unique=True)
@@ -146,6 +152,10 @@ class DisplacementYear(models.Model):
     slug = models.SlugField(max_length=255, null=True, blank=True)
     displacement = models.ForeignKey(Displacements, on_delete=models.CASCADE)
     year = models.ForeignKey(Years, on_delete=models.CASCADE)
+
+    @property
+    def title(self) -> str:
+        return f"{self.displacement.value}cc {self.year.value}"
 
     def save(self, *args, **kwargs):
         brand_slug = getattr(self.displacement.brand, "slug", None) or getattr(self.displacement.brand, "name", "")

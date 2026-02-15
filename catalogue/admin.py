@@ -5,9 +5,8 @@ from django.db.models import Q
 
 from .models import (
     Brand, Category, Attribute, AttributeValue,
-    Product, ProductImage, ProductCategory, ProductAttribute,
+    Product, ProductImage, ProductCategory, ProductAttribute, ProductVehicleCompatibility, CategoryAttribute,
 )
-
 
 class TimeStampedReadonlyMixin:
     readonly_fields = ("created_at", "updated_at")
@@ -33,6 +32,12 @@ class BrandAdmin(TimeStampedReadonlyMixin, admin.ModelAdmin):
         return "-"
     site_link.short_description = "Website"
 
+class CategoryAttributeInline(admin.TabularInline):
+    model = CategoryAttribute
+    extra = 0
+    fields = ("category", "attribute")
+    list_filter = ("category", "attribute")
+    # search_fields = ("category__name", "attribute__name")
 
 @admin.register(Category)
 class CategoryAdmin(TimeStampedReadonlyMixin, admin.ModelAdmin):
@@ -42,6 +47,7 @@ class CategoryAdmin(TimeStampedReadonlyMixin, admin.ModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
     autocomplete_fields = ("parent",)
     ordering = ("name",)
+    inlines = (CategoryAttributeInline,)
     fieldsets = (
         (None, {"fields": ("name", "slug", "parent", "description", "is_active")}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
@@ -102,9 +108,9 @@ class ProductCategoryInline(admin.TabularInline):
 class ProductAttributeInline(admin.TabularInline):
     model = ProductAttribute
     extra = 1
-    autocomplete_fields = ("attribute", "attribute_value")
-    fields = ("attribute", "attribute_value", "value_text", "created_at", "updated_at")
-    readonly_fields = ("created_at", "updated_at")
+    autocomplete_fields = ("attribute",)
+    fields = ("attribute", "attribute_value", "value_text")
+    ordering = ("attribute__name",)
 
 
 class InStockFilter(admin.SimpleListFilter):
@@ -137,23 +143,26 @@ class PromoFilter(admin.SimpleListFilter):
         return queryset
 
 
+class ProductVehicleCompatibilityInline(admin.TabularInline):
+    model = ProductVehicleCompatibility
+    extra = 1
+    fields = ('vehicle_type', 'displacement_year', 'notes')
+    autocomplete_fields = ('vehicle_type', 'displacement_year')
+
 @admin.register(Product)
 class ProductAdmin(TimeStampedReadonlyMixin, admin.ModelAdmin):
     list_display = (
-        "sku", "name", "brand", "price", "stock_qty",
-        "is_active", "visible", "is_featured",
-        "ean", "mpn", "published_at",
+        "sku", "mpn",  "ean", "brand", "price", "stock_qty",
+        "is_active", "visible"
     )
     list_filter = (
-        "is_active", "visible", "is_featured",
-        InStockFilter, PromoFilter, "brand",
-        ("published_at", admin.DateFieldListFilter),
+        "is_active", "visible",
+        InStockFilter, PromoFilter, "brand", "categories",
     )
-    search_fields = ("sku", "name", "slug", "ean", "mpn", "brand__name")
-    list_editable = ("price", "stock_qty", "is_active", "visible", "is_featured")
+    search_fields = ("sku", "mpn", "ean")
     prepopulated_fields = {"slug": ("name",)}
     autocomplete_fields = ("brand",)
-    inlines = [ProductImageInline, ProductCategoryInline, ProductAttributeInline]
+    inlines = [ProductImageInline, ProductCategoryInline, ProductAttributeInline, ProductVehicleCompatibilityInline]
     ordering = ("-created_at",)
     save_on_top = True
 
@@ -161,7 +170,7 @@ class ProductAdmin(TimeStampedReadonlyMixin, admin.ModelAdmin):
         ("Identity", {"fields": ("name", "slug", "sku", "brand")}),
         ("Content", {"fields": ("description",)}),
         ("Merchandising", {"fields": ("is_active", "visible", "is_featured")}),
-        ("Identifiers", {"fields": ("ean", "mpn")}),
+        ("Identifiers", {"fields": ("ean", "mpn", "sync_id")}),
         ("Pricing", {
             "fields": (
                 "price", "price_compare_at",
@@ -171,7 +180,6 @@ class ProductAdmin(TimeStampedReadonlyMixin, admin.ModelAdmin):
         ("Inventory", {"fields": ("stock_qty",)}),
         ("Shipping", {"fields": ("weight_kg", "length_mm", "width_mm", "height_mm")}),
         ("SEO & Publishing", {"fields": ("published_at", "meta_title", "meta_description")}),
-        ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
     actions = ["mark_visible", "mark_hidden", "mark_active", "mark_inactive"]
@@ -234,7 +242,7 @@ class ProductAttributeAdmin(TimeStampedReadonlyMixin, admin.ModelAdmin):
     list_display = ("product", "attribute", "display_value", "created_at")
     list_filter = ("attribute",)
     search_fields = ("product__sku", "product__name", "attribute__name", "value_text", "attribute_value__value")
-    autocomplete_fields = ("product", "attribute", "attribute_value")
+    autocomplete_fields = ("product", "attribute")
     ordering = ("product__sku", "attribute__name")
 
     def display_value(self, obj):

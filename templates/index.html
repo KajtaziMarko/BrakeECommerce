@@ -240,7 +240,7 @@
             resetSelect(displacementSelect);
             resetSelect(yearSelect);
 
-            populateSelect(modelSelect, modelsData);
+            populateSelect(modelSelect, modelsData, 'id', 'title');
         });
 
         modelSelect.addEventListener('change', async () => {
@@ -255,7 +255,7 @@
                 populateSelect(displacementSelect, displacementsData, 'id', 'value');
             } else {
                 let typesData = await fetchTypes(vehicleType, brandId, modelId);
-                populateSelect(typeSelect, typesData);
+                populateSelect(typeSelect, typesData, "id", "title");
             }
         });
 

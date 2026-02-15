@@ -54,8 +54,10 @@ INSTALLED_APPS = [
     'import_export',
     'rest_framework',
     'main',
+    'accounts',
     'vehicles',
     'catalogue',
+    'orders',
 ]
 
 MIDDLEWARE = [
@@ -127,7 +129,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = os.getenv('DJANGO_TIME_ZONE', 'Europe/Skopje')
 
 USE_I18N = True
 
@@ -152,3 +154,5 @@ MEDIA_ROOT  = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTH_USER_MODEL = 'accounts.User'
